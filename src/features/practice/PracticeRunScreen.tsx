@@ -42,8 +42,6 @@ interface Outcome {
   xp: number;
 }
 
-const STRATEGIES = ['mental_math', 'break_parts', 'formula', 'approximation'] as const;
-
 /**
  * The practice runner. It owns the question loop and Think First mode, and
  * hands every answer to `PracticeService`, which updates all derived state.
@@ -70,7 +68,6 @@ export function PracticeRunScreen(): React.JSX.Element {
   const [answer, setAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [estimate, setEstimate] = useState('');
-  const [strategy, setStrategy] = useState<string | null>(null);
   const [hintLevel, setHintLevel] = useState(0);
   const [hintText, setHintText] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitAnswerResult | null>(null);
@@ -137,7 +134,6 @@ export function PracticeRunScreen(): React.JSX.Element {
     setAnswer('');
     setSelectedOption(null);
     setEstimate('');
-    setStrategy(null);
     setHintLevel(0);
     setHintText(null);
     setResult(null);
@@ -172,7 +168,7 @@ export function PracticeRunScreen(): React.JSX.Element {
         hintsUsed: hintLevel,
         mode: params.mode,
         estimateValue: estimate.trim().length > 0 ? Number(estimate) : null,
-        strategy,
+        strategy: null,
       });
 
       setResult(submitted);
@@ -296,7 +292,7 @@ export function PracticeRunScreen(): React.JSX.Element {
 
         <Spacer size={4} />
 
-        {/* Think First: estimate and strategy before the exact answer (spec §21) */}
+        {/* Think First: estimate before the exact answer (spec §21) */}
         {phase === 'think' ? (
           <Card accent={theme.colors.topic.violet}>
             <Column gap={3}>
@@ -318,36 +314,11 @@ export function PracticeRunScreen(): React.JSX.Element {
                   mono
                 />
               </Column>
-              <Column gap={2}>
-                <Txt size="small" color={theme.colors.textMuted}>
-                  {t('practice.chooseStrategy')}
-                </Txt>
-                <Row gap={2} wrap>
-                  {STRATEGIES.map((option) => (
-                    <Button
-                      key={option}
-                      label={t(
-                        ('practice.strategy' +
-                          (option === 'mental_math'
-                            ? 'Mental'
-                            : option === 'break_parts'
-                              ? 'Parts'
-                              : option === 'formula'
-                                ? 'Formula'
-                                : 'Approx')) as 'practice.strategyMental',
-                      )}
-                      size="sm"
-                      variant={strategy === option ? 'primary' : 'secondary'}
-                      onPress={() => setStrategy(option)}
-                    />
-                  ))}
-                </Row>
-              </Column>
               <Button
                 label={t('practice.solveNow')}
                 full
                 onPress={() => setPhase('answer')}
-                disabled={estimate.trim().length === 0 && strategy === null}
+                disabled={estimate.trim().length === 0}
               />
             </Column>
           </Card>

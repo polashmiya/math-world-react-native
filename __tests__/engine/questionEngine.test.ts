@@ -1,5 +1,5 @@
 import { ALL_GENERATORS, candidateGenerators, generateQuestions, getGenerator, regenerate } from '../../src/core/question-engine/registry';
-import { contextFor } from '../../src/core/question-engine/types';
+import { contextFor, defineGenerator } from '../../src/core/question-engine/types';
 import { normalizeAnswer, scoreEstimate, validateAnswer } from '../../src/core/question-engine/answerValidator';
 import { nextDifficulty, speedScore, startingDifficulty } from '../../src/core/question-engine/difficultyEngine';
 import { RuleBasedMathTutor, renderSolution } from '../../src/core/question-engine/solutionEngine';
@@ -97,11 +97,28 @@ describe('every generator produces valid, self-consistent questions', () => {
         expect(options.length).toBeGreaterThanOrEqual(2);
         expect(new Set(options.map((o) => o.text)).size).toBe(options.length);
         expect(options.some((o) => o.id === question.correctAnswer)).toBe(true);
+      } else {
+        // Free-text types (numeric, word_problem, estimation, ...) must never
+        // gain an option list: that silently rewrites `correctAnswer` into an
+        // internal option id (e.g. "opt2") that no typed answer can ever
+        // match, marking every genuinely correct answer wrong.
+        expect(question.options).toBeUndefined();
       }
 
       // The validator must accept the question's own answer.
       const own = validateAnswer(question, question.correctAnswer);
       expect(own.isCorrect).toBe(true);
+
+      // For free-text answers whose canonical form is a plain number (not a
+      // ratio, expression or other composite string), a plain re-typed value
+      // of that number must also be accepted -- not just the raw stored field.
+      if (
+        (question.questionType === 'numeric' || question.questionType === 'word_problem') &&
+        Number.isFinite(Number(question.correctAnswer))
+      ) {
+        const retyped = validateAnswer(question, String(Number(question.correctAnswer)));
+        expect(retyped.isCorrect).toBe(true);
+      }
 
       // ...and reject an obviously wrong one.
       const wrongCandidate = isChoiceQuestion(question)
@@ -111,6 +128,65 @@ describe('every generator produces valid, self-consistent questions', () => {
         expect(validateAnswer(question, wrongCandidate).isCorrect).toBe(false);
       }
     }
+  });
+});
+
+describe('defineGenerator option building', () => {
+  it('keeps the literal correctAnswer for free-text types even when choices are supplied', () => {
+    const generator = defineGenerator(
+      {
+        id: 'test.numeric-with-choices',
+        topicId: 'arithmetic',
+        skillIds: [],
+        questionType: 'numeric',
+        minDifficulty: 1,
+        maxDifficulty: 9,
+        name: 'Test',
+        nameBn: 'পরীক্ষা',
+      },
+      () => ({
+        prompt: '9 + 4 = ?',
+        promptBn: '৯ + ৪ = ?',
+        correctAnswer: '13',
+        choices: ['12', '14', '15'],
+        params: {},
+        solutionSteps: [{ order: 1, detail: '13' }],
+      }),
+    );
+
+    const question = generator.generate(contextFor('seed', 3));
+    expect(question.correctAnswer).toBe('13');
+    expect(question.options).toBeUndefined();
+    expect(validateAnswer(question, '13').isCorrect).toBe(true);
+  });
+
+  it('still builds options with a remapped correctAnswer for real choice types', () => {
+    const generator = defineGenerator(
+      {
+        id: 'test.mcq-with-choices',
+        topicId: 'arithmetic',
+        skillIds: [],
+        questionType: 'mcq',
+        minDifficulty: 1,
+        maxDifficulty: 9,
+        name: 'Test',
+        nameBn: 'পরীক্ষা',
+      },
+      () => ({
+        prompt: '9 + 4 = ?',
+        promptBn: '৯ + ৪ = ?',
+        correctAnswer: '13',
+        choices: ['12', '14', '15'],
+        params: {},
+        solutionSteps: [{ order: 1, detail: '13' }],
+      }),
+    );
+
+    const question = generator.generate(contextFor('seed', 3));
+    expect(question.options?.length).toBe(4);
+    const matched = question.options?.find((o) => o.id === question.correctAnswer);
+    expect(matched?.text).toBe('13');
+    expect(validateAnswer(question, '13').isCorrect).toBe(true);
   });
 });
 

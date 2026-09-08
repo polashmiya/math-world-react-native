@@ -1,11 +1,12 @@
 import type { BrainCategory } from '../constants/categories';
 import type { CurriculumCode } from '../constants/levels';
-import type {
-  ID,
-  Question,
-  QuestionOption,
-  QuestionType,
-  SolutionStep,
+import {
+  CHOICE_QUESTION_TYPES,
+  type ID,
+  type Question,
+  type QuestionOption,
+  type QuestionType,
+  type SolutionStep,
 } from '../../domain/models';
 import { clampDifficulty, estimatedSecondsForDifficulty, pointsForDifficulty } from '../constants/difficulty';
 import { CURRENT_CONTENT_VERSION } from '../../domain/models/common';
@@ -162,6 +163,11 @@ function buildOptions(
       { id: 'false', text: 'False', textBn: 'মিথ্যা' },
     ];
   }
+  // Only question types answered by picking from a list get their `choices`
+  // turned into options. Free-text types (numeric, word_problem, estimation,
+  // ...) may still pass `choices` for distractor stats, but must keep their
+  // literal `correctAnswer` so typed answers can ever match it.
+  if (!CHOICE_QUESTION_TYPES.includes(questionType)) return undefined;
   if (!draft.choices || draft.choices.length === 0) return undefined;
 
   const unique: string[] = [];
