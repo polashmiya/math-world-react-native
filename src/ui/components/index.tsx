@@ -14,7 +14,16 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Line, Path, Polyline, Rect } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Line,
+  LinearGradient as SvgLinearGradient,
+  Path,
+  Polyline,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 import { useTheme } from '../../app/providers/AppProvider';
 import { difficultyColor, masteryColor, type FontSizeToken, type Theme } from '../theme';
 import { formatNumber } from '../../core/utils/format';
@@ -218,6 +227,71 @@ export function Celebration({ colors, count = 16 }: { colors?: string[]; count?:
           }}
         />
       ))}
+    </View>
+  );
+}
+
+const LOGO_SATELLITES: { symbol: string; angle: number; color: (theme: Theme) => string }[] = [
+  { symbol: 'π', angle: -55, color: (t) => t.colors.topic.rose },
+  { symbol: '√', angle: 35, color: (t) => t.colors.topic.teal },
+  { symbol: '÷', angle: 145, color: (t) => t.colors.topic.amber },
+  { symbol: '∑', angle: 235, color: (t) => t.colors.topic.indigo },
+];
+
+/**
+ * The app's mark: a gradient badge with the calculator emoji, orbited by a
+ * few math-symbol satellites. Used on onboarding — code-drawn so it stays
+ * crisp and theme-aware instead of a static image.
+ */
+export function AppLogoMark({ size = 108 }: { size?: number }): React.JSX.Element {
+  const theme = useTheme();
+  const orbit = size * 0.62;
+  const badge = size * 0.62;
+
+  return (
+    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+      <Svg width={badge} height={badge} viewBox="0 0 100 100">
+        <Defs>
+          <SvgLinearGradient id="mw-logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <Stop offset="0%" stopColor={theme.colors.topic.violet} />
+            <Stop offset="55%" stopColor={theme.colors.primary} />
+            <Stop offset="100%" stopColor={theme.colors.topic.blue} />
+          </SvgLinearGradient>
+        </Defs>
+        <Circle cx={50} cy={50} r={48} fill="url(#mw-logo-grad)" />
+        <Circle cx={50} cy={50} r={48} fill="none" stroke="#ffffff" strokeOpacity={0.25} strokeWidth={2} />
+      </Svg>
+      <View style={{ position: 'absolute' }}>
+        <Txt size="display">🧮</Txt>
+      </View>
+      {LOGO_SATELLITES.map((sat, index) => {
+        const rad = (sat.angle * Math.PI) / 180;
+        const x = size / 2 + Math.cos(rad) * (orbit / 2) - 12;
+        const y = size / 2 + Math.sin(rad) * (orbit / 2) - 12;
+        return (
+          <FadeInView key={sat.symbol} delay={200 + index * 90} style={{ position: 'absolute', left: x, top: y }}>
+            <View
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: theme.radius.pill,
+                backgroundColor: sat.color(theme),
+                alignItems: 'center',
+                justifyContent: 'center',
+                shadowColor: '#000000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 4,
+                elevation: 2,
+              }}
+            >
+              <Txt size="caption" weight="bold" color="#ffffff">
+                {sat.symbol}
+              </Txt>
+            </View>
+          </FadeInView>
+        );
+      })}
     </View>
   );
 }

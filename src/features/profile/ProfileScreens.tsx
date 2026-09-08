@@ -9,6 +9,7 @@ import { LEARNING_GOALS, LEARNING_GOAL_LABELS, type LearningGoal } from '../../d
 import type { ProfileOverview } from '../../domain/services';
 import { LANGUAGE_LABELS, pickLocalized } from '../../i18n';
 import {
+  AppLogoMark,
   Badge,
   Button,
   Card,
@@ -366,8 +367,8 @@ export function OnboardingScreen(): React.JSX.Element {
   return (
     <Screen scroll>
       <Spacer size={6} />
-      <Column gap={2} style={{ alignItems: 'center' }}>
-        <Txt size="display">🧮</Txt>
+      <Column gap={3} style={{ alignItems: 'center' }}>
+        <AppLogoMark size={112} />
         <Txt size="heading" weight="bold" align="center">
           {t('onboarding.welcome')}
         </Txt>
