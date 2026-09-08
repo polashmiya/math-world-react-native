@@ -3,12 +3,14 @@ import {
   compare,
   div,
   frac,
+  gcd,
   mul,
   sub,
   toNumber,
   toString as fracToString,
 } from '../../math/fraction';
 import { lcm } from '../../math/numberTheory';
+import { roundToPlace } from '../../math/arithmetic';
 import { formatNumber } from '../../utils/format';
 import { defineGenerator, step, type QuestionGenerator } from '../types';
 import { bn, numericDistractors } from './helpers';
@@ -261,9 +263,185 @@ const decimalConversion = defineGenerator(
   },
 );
 
+const simplifyFraction = defineGenerator(
+  {
+    id: 'frac.simplify',
+    name: 'Simplify a Fraction',
+    nameBn: 'ভগ্নাংশ সরলীকরণ',
+    topicId: 'fractions',
+    skillIds: ['skill.fraction-arithmetic'],
+    questionType: 'mcq',
+    brainCategory: 'number_sense',
+    tags: ['fractions', 'simplify'],
+    minDifficulty: 1,
+    maxDifficulty: 5,
+  },
+  ({ rng, difficulty }) => {
+    // Build a fully-reduced fraction, then scale it up so the question has
+    // real simplifying to do.
+    const cap = 3 + difficulty;
+    let num = rng.int(1, cap);
+    let den = rng.int(num + 1, cap + 3);
+    const g = gcd(num, den);
+    num = num / g;
+    den = den / g;
+    const scale = rng.int(2, 3 + difficulty);
+    const n = num * scale;
+    const d = den * scale;
+    const answer = num + '/' + den;
+
+    return {
+      prompt: 'Simplify ' + n + '/' + d + ' to its lowest terms.',
+      promptBn: bn(n) + '/' + bn(d) + ' কে সরলতম আকারে লিখুন।',
+      correctAnswer: answer,
+      choices: [n + '/' + d, num + '/' + (den * 2), (num * 2) + '/' + den],
+      params: { n, d },
+      solutionSteps: [
+        step('Find the GCD of ' + n + ' and ' + d + ': GCD = ' + scale * g),
+        step(n + ' ÷ ' + scale * g + ' = ' + num + ', ' + d + ' ÷ ' + scale * g + ' = ' + den),
+        step('Simplified: ' + answer),
+      ],
+      explanation: 'Dividing both numerator and denominator by their GCD gives the lowest-terms form.',
+      explanationBn: 'লব ও হর উভয়কে তাদের গসাগু দিয়ে ভাগ করলে সরলতম আকার পাওয়া যায়।',
+      hints: ['Find the greatest common divisor of the numerator and denominator first.'],
+      hintsBn: ['প্রথমে লব ও হরের গসাগু বের করুন।'],
+    };
+  },
+);
+
+const mixedImproper = defineGenerator(
+  {
+    id: 'frac.mixed-improper',
+    name: 'Mixed Numbers & Improper Fractions',
+    nameBn: 'মিশ্র ও অপ্রকৃত ভগ্নাংশ',
+    topicId: 'fractions',
+    skillIds: ['skill.fraction-arithmetic'],
+    questionType: 'mcq',
+    tags: ['fractions', 'mixed-numbers'],
+    minDifficulty: 1,
+    maxDifficulty: 5,
+  },
+  ({ rng, difficulty }) => {
+    const whole = rng.int(1, 3 + Math.floor(difficulty / 2));
+    const den = rng.int(2, 5 + difficulty);
+    const num = rng.int(1, den - 1);
+    const value = frac(whole * den + num, den);
+    const toImproper = rng.bool();
+    const mixedText = whole + ' ' + num + '/' + den;
+    const improperText = fracToString(value);
+
+    return {
+      prompt: toImproper
+        ? 'Write ' + mixedText + ' as an improper fraction.'
+        : 'Write ' + improperText + ' as a mixed number.',
+      promptBn: toImproper
+        ? bn(whole) + ' ' + bn(num) + '/' + bn(den) + ' কে অপ্রকৃত ভগ্নাংশে লিখুন।'
+        : bn(value.n) + '/' + bn(value.d) + ' কে মিশ্র সংখ্যায় লিখুন।',
+      correctAnswer: toImproper ? improperText : mixedText,
+      choices: [
+        (whole + 1) + ' ' + num + '/' + den,
+        num + '/' + den,
+        (whole * den) + '/' + den,
+      ],
+      params: { whole, num, den, dir: toImproper ? 'to-improper' : 'to-mixed' },
+      solutionSteps: toImproper
+        ? [
+            step('Multiply the whole number by the denominator: ' + whole + ' × ' + den + ' = ' + whole * den),
+            step('Add the numerator: ' + whole * den + ' + ' + num + ' = ' + value.n),
+            step('Result: ' + improperText),
+          ]
+        : [
+            step('Divide the numerator by the denominator: ' + value.n + ' ÷ ' + value.d + ' = ' + whole + ' remainder ' + num),
+            step('Result: ' + mixedText),
+          ],
+      explanation: 'A mixed number and its improper fraction always name the same amount.',
+      explanationBn: 'মিশ্র সংখ্যা ও তার অপ্রকৃত ভগ্নাংশ সর্বদা একই পরিমাণ বোঝায়।',
+    };
+  },
+);
+
+const rounding = defineGenerator(
+  {
+    id: 'dec.rounding',
+    name: 'Rounding Decimals',
+    nameBn: 'দশমিক নিকটবর্তীকরণ',
+    topicId: 'decimals',
+    skillIds: ['skill.rounding'],
+    questionType: 'numeric',
+    brainCategory: 'number_sense',
+    tags: ['decimals', 'rounding'],
+    minDifficulty: 1,
+    maxDifficulty: 5,
+  },
+  ({ rng, difficulty }) => {
+    const places = difficulty <= 2 ? rng.pick([0, 1]) : rng.pick([0, 1, 2]);
+    const whole = rng.int(1, 20 + difficulty * 10);
+    const decimalDigits = rng.int(1, 999);
+    const value = Number((whole + decimalDigits / 1000).toFixed(3));
+    const result = roundToPlace(value, places);
+    const placeLabel =
+      places === 0 ? 'the nearest whole number' : places + ' decimal place' + (places === 1 ? '' : 's');
+    const placeLabelBn = places === 0 ? 'নিকটতম পূর্ণসংখ্যায়' : bn(places) + ' দশমিক স্থানে';
+
+    return {
+      prompt: 'Round ' + value + ' to ' + placeLabel + '.',
+      promptBn: bn(value) + ' কে ' + placeLabelBn + ' নিকটবর্তী করুন।',
+      correctAnswer: formatNumber(result.value, Math.max(places, 0)),
+      choices: numericDistractors(result.value, rng, 3, { decimals: Math.max(places, 0) }),
+      params: { value, places },
+      solutionSteps: result.steps.map((s) => step(s)),
+      explanation: 'Look one digit past the rounding place: 5 or more rounds up, 4 or less rounds down.',
+      explanationBn: 'নিকটবর্তীকরণের ঘরের পরের অঙ্কটি দেখুন: ৫ বা বেশি হলে বাড়ে, ৪ বা কম হলে একই থাকে।',
+    };
+  },
+);
+
+const decimalArithmetic = defineGenerator(
+  {
+    id: 'dec.arithmetic',
+    name: 'Decimal Arithmetic',
+    nameBn: 'দশমিকের প্রক্রিয়া',
+    topicId: 'decimals',
+    skillIds: ['skill.decimal-arithmetic'],
+    questionType: 'numeric',
+    tags: ['decimals', 'arithmetic'],
+    minDifficulty: 1,
+    maxDifficulty: 6,
+  },
+  ({ rng, difficulty }) => {
+    const decimals = difficulty <= 3 ? 1 : 2;
+    const scale = Math.pow(10, decimals);
+    const a = rng.int(1, 20 + difficulty * 10) / scale;
+    const b = rng.int(1, 20 + difficulty * 10) / scale;
+    const isAdd = rng.bool(0.55);
+    const answer = Number((isAdd ? a + b : Math.max(a, b) - Math.min(a, b)).toFixed(decimals));
+    const [big, small] = a >= b ? [a, b] : [b, a];
+
+    return {
+      prompt: isAdd ? a + ' + ' + b + ' = ?' : big + ' - ' + small + ' = ?',
+      promptBn: isAdd ? bn(a) + ' + ' + bn(b) + ' = ?' : bn(big) + ' - ' + bn(small) + ' = ?',
+      correctAnswer: formatNumber(answer, decimals),
+      choices: numericDistractors(answer, rng, 3, { decimals }),
+      params: { a, b, isAdd: isAdd ? 1 : 0 },
+      solutionSteps: [
+        step('Line up the decimal points, then ' + (isAdd ? 'add' : 'subtract') + ' as with whole numbers.'),
+        step((isAdd ? a + ' + ' + b : big + ' - ' + small) + ' = ' + answer),
+      ],
+      explanation: 'Decimals add and subtract just like whole numbers once the decimal points line up.',
+      explanationBn: 'দশমিক বিন্দু সমান করে নিলে দশমিক সংখ্যাও পূর্ণসংখ্যার মতোই যোগ-বিয়োগ করা যায়।',
+      hints: ['Line up the decimal points before you add or subtract.'],
+      hintsBn: ['যোগ বা বিয়োগের আগে দশমিক বিন্দু সমান করে নিন।'],
+    };
+  },
+);
+
 export const FRACTION_GENERATORS: QuestionGenerator[] = [
   fractionArithmetic,
   compareFractions,
   fractionOfQuantity,
   decimalConversion,
+  simplifyFraction,
+  mixedImproper,
+  rounding,
+  decimalArithmetic,
 ];

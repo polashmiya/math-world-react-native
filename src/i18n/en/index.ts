@@ -309,6 +309,11 @@ export const en = {
     ready: "You're ready",
     readyBody: 'Your progress stays on this device. Start whenever you like.',
     getStarted: 'Get started',
+    tourTitle: "Here's what you'll find",
+    tourLearnDesc: 'Step-by-step lessons that build up each topic, from the basics onward.',
+    tourPracticeDesc: 'Unlimited practice questions, picked to match your level.',
+    tourBrainDesc: 'Quick daily brain games to keep your mental math sharp.',
+    tourExamsDesc: 'Timed mock exams for SSC, HSC, BCS, bank and admission tests.',
   },
   search: {
     title: 'Search',

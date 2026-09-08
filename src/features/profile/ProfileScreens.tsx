@@ -14,6 +14,7 @@ import {
   Card,
   Column,
   Divider,
+  FadeInView,
   Field,
   Loading,
   ProgressBar,
@@ -376,7 +377,7 @@ export function OnboardingScreen(): React.JSX.Element {
       </Column>
 
       <Spacer size={5} />
-      <ProgressBar ratio={(step + 1) / 4} height={6} />
+      <ProgressBar ratio={(step + 1) / 5} height={6} />
       <Spacer size={4} />
 
       {step === 0 ? (
@@ -440,6 +441,74 @@ export function OnboardingScreen(): React.JSX.Element {
       ) : null}
 
       {step === 3 ? (
+        <Column gap={3}>
+          <Txt size="bodyLarge" weight="semibold">
+            {t('onboarding.tourTitle')}
+          </Txt>
+          <FadeInView delay={0}>
+            <Card accent={theme.colors.topic.green}>
+              <Row gap={3}>
+                <Txt size="heading">📘</Txt>
+                <Column gap={1} style={{ flex: 1 }}>
+                  <Txt size="body" weight="semibold">
+                    {t('learn.title')}
+                  </Txt>
+                  <Txt size="small" color={theme.colors.textMuted}>
+                    {t('onboarding.tourLearnDesc')}
+                  </Txt>
+                </Column>
+              </Row>
+            </Card>
+          </FadeInView>
+          <FadeInView delay={80}>
+            <Card accent={theme.colors.topic.blue}>
+              <Row gap={3}>
+                <Txt size="heading">✏️</Txt>
+                <Column gap={1} style={{ flex: 1 }}>
+                  <Txt size="body" weight="semibold">
+                    {t('practice.title')}
+                  </Txt>
+                  <Txt size="small" color={theme.colors.textMuted}>
+                    {t('onboarding.tourPracticeDesc')}
+                  </Txt>
+                </Column>
+              </Row>
+            </Card>
+          </FadeInView>
+          <FadeInView delay={160}>
+            <Card accent={theme.colors.topic.violet}>
+              <Row gap={3}>
+                <Txt size="heading">🧠</Txt>
+                <Column gap={1} style={{ flex: 1 }}>
+                  <Txt size="body" weight="semibold">
+                    {t('brain.title')}
+                  </Txt>
+                  <Txt size="small" color={theme.colors.textMuted}>
+                    {t('onboarding.tourBrainDesc')}
+                  </Txt>
+                </Column>
+              </Row>
+            </Card>
+          </FadeInView>
+          <FadeInView delay={240}>
+            <Card accent={theme.colors.topic.amber}>
+              <Row gap={3}>
+                <Txt size="heading">📝</Txt>
+                <Column gap={1} style={{ flex: 1 }}>
+                  <Txt size="body" weight="semibold">
+                    {t('exams.title')}
+                  </Txt>
+                  <Txt size="small" color={theme.colors.textMuted}>
+                    {t('onboarding.tourExamsDesc')}
+                  </Txt>
+                </Column>
+              </Row>
+            </Card>
+          </FadeInView>
+        </Column>
+      ) : null}
+
+      {step === 4 ? (
         <Card>
           <Column gap={3}>
             <Txt size="bodyLarge" weight="semibold">
@@ -470,10 +539,10 @@ export function OnboardingScreen(): React.JSX.Element {
           onPress={() => setStep((value) => Math.max(0, value - 1))}
           style={{ flex: 1 }}
         />
-        {step < 3 ? (
+        {step < 4 ? (
           <Button
             label={t('common.next')}
-            onPress={() => setStep((value) => Math.min(3, value + 1))}
+            onPress={() => setStep((value) => Math.min(4, value + 1))}
             style={{ flex: 1 }}
           />
         ) : (

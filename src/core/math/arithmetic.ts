@@ -25,6 +25,30 @@ export function percentageOf(percent: number, amount: number): ArithmeticResult 
   };
 }
 
+/**
+ * Rounds `value` to `places` decimal digits (negative `places` rounds to
+ * tens/hundreds/etc — e.g. -1 rounds to the nearest ten).
+ */
+export function roundToPlace(value: number, places: number): ArithmeticResult {
+  const factor = Math.pow(10, places);
+  const rounded = Math.round(value * factor) / factor;
+  const placeLabel =
+    places > 0
+      ? places + ' decimal place' + (places === 1 ? '' : 's')
+      : places === 0
+        ? 'the nearest whole number'
+        : 'the nearest ' + Math.pow(10, -places);
+  return {
+    label: 'Round ' + formatNumber(value) + ' to ' + placeLabel,
+    value: rounded,
+    steps: [
+      'Look at the digit right after the place you are rounding to.',
+      '4 or below rounds down, 5 or above rounds up.',
+      formatNumber(value) + ' rounds to ' + formatNumber(rounded, Math.max(places, 0)),
+    ],
+  };
+}
+
 export function whatPercent(part: number, whole: number): ArithmeticResult {
   if (whole === 0) throw new MathError('The whole cannot be zero');
   const value = (part / whole) * 100;
