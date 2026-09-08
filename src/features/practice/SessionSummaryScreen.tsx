@@ -86,14 +86,30 @@ export function SessionSummaryScreen(): React.JSX.Element {
 
       <FadeInView delay={120}>
         <Row gap={3} wrap>
-          <StatTile label={t('common.correct')} value={correct + ' / ' + answered} emoji="✅" />
-          <StatTile label={t('common.accuracy')} value={Math.round(accuracy * 100) + '%'} emoji="🎯" />
+          <StatTile
+            label={t('common.correct')}
+            value={correct + ' / ' + answered}
+            emoji="✅"
+            color={theme.colors.success}
+          />
+          <StatTile
+            label={t('common.accuracy')}
+            value={Math.round(accuracy * 100) + '%'}
+            emoji="🎯"
+            color={theme.colors.topic.blue}
+          />
           <StatTile
             label={t('progress.averageSpeed')}
             value={averageTimeMs > 0 ? formatDuration(averageTimeMs) : '—'}
             emoji="⏱️"
+            color={theme.colors.topic.teal}
           />
-          <StatTile label={t('common.streak')} value={String(bestStreak)} emoji="🔥" />
+          <StatTile
+            label={t('common.streak')}
+            value={String(bestStreak)}
+            emoji="🔥"
+            color={theme.colors.accent}
+          />
         </Row>
       </FadeInView>
 

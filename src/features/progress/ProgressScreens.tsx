@@ -94,19 +94,41 @@ export function ProgressScreen(): React.JSX.Element {
       <Spacer size={4} />
 
       <Row gap={3} wrap>
-        <StatTile label={t('progress.questionsSolved')} value={String(dashboard.questionsSolved)} emoji="✅" />
-        <StatTile label={t('common.accuracy')} value={Math.round(dashboard.accuracy * 100) + '%'} emoji="🎯" />
-        <StatTile label={t('progress.topicsMastered')} value={String(dashboard.topicsMastered)} emoji="🏅" />
+        <StatTile
+          label={t('progress.questionsSolved')}
+          value={String(dashboard.questionsSolved)}
+          emoji="✅"
+          color={theme.colors.success}
+        />
+        <StatTile
+          label={t('common.accuracy')}
+          value={Math.round(dashboard.accuracy * 100) + '%'}
+          emoji="🎯"
+          color={theme.colors.topic.blue}
+        />
+        <StatTile
+          label={t('progress.topicsMastered')}
+          value={String(dashboard.topicsMastered)}
+          emoji="🏅"
+          color={theme.colors.accent}
+        />
         <StatTile
           label={t('progress.averageSpeed')}
           value={dashboard.averageSpeedMs > 0 ? formatDuration(dashboard.averageSpeedMs) : '—'}
           emoji="⏱️"
+          color={theme.colors.topic.teal}
         />
-        <StatTile label={t('progress.longestStreak')} value={String(dashboard.longestStreak)} emoji="📅" />
+        <StatTile
+          label={t('progress.longestStreak')}
+          value={String(dashboard.longestStreak)}
+          emoji="📅"
+          color={theme.colors.topic.orange}
+        />
         <StatTile
           label={t('progress.examReadiness')}
           value={Math.round(dashboard.examReadiness * 100) + '%'}
           emoji="📝"
+          color={theme.colors.topic.violet}
           onPress={() => navigation.navigate('Exams')}
         />
       </Row>

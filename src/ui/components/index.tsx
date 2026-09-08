@@ -45,6 +45,18 @@ function usePressScale(theme: Theme, pressedScale = 0.97): {
   return { value, onPressIn, onPressOut };
 }
 
+/** Mixes a theme hex color with the card surface at a low alpha for a soft tint. */
+function withAlpha(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const value = parseInt(full, 16);
+  if (!Number.isFinite(value) || full.length !== 6) return hex;
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+  return 'rgba(' + r + ', ' + g + ', ' + b + ', ' + alpha + ')';
+}
+
 /** Soft elevation shared by every card, so the UI reads as layered rather than flat. */
 function cardShadow(theme: Theme): ViewStyle {
   return {
@@ -437,7 +449,10 @@ export function Card({
 }): React.JSX.Element {
   const theme = useTheme();
   const scale = usePressScale(theme);
-  const inner = (
+  // `style` must land on this same view (not a wrapper) — callers rely on it
+  // for layout (flex/minWidth in grids), padding (padded=false + custom
+  // padding) and visual overrides (backgroundColor banners) all at once.
+  const body = (
     <View
       style={[
         {
@@ -448,18 +463,17 @@ export function Card({
           padding: padded ? theme.spacing(4) : 0,
           overflow: 'hidden',
         },
+        cardShadow(theme),
         accent ? { borderLeftWidth: 4, borderLeftColor: accent } : null,
+        disabled ? { opacity: 0.55 } : null,
         style,
       ]}
     >
       {children}
     </View>
   );
-  const shadow = cardShadow(theme);
 
-  if (!onPress || disabled) {
-    return <View style={[shadow, disabled ? { opacity: 0.55 } : null]}>{inner}</View>;
-  }
+  if (!onPress || disabled) return body;
 
   return (
     <Pressable
@@ -469,7 +483,7 @@ export function Card({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
     >
-      <Animated.View style={[shadow, { transform: [{ scale: scale.value }] }]}>{inner}</Animated.View>
+      <Animated.View style={{ transform: [{ scale: scale.value }] }}>{body}</Animated.View>
     </Pressable>
   );
 }
@@ -718,8 +732,13 @@ export function StatTile({
   onPress?: () => void;
 }): React.JSX.Element {
   const theme = useTheme();
+  const tint = color ?? theme.colors.primary;
   return (
-    <Card onPress={onPress} style={{ flex: 1, minWidth: 140 }}>
+    <Card
+      onPress={onPress}
+      accent={tint}
+      style={{ flex: 1, minWidth: 140, backgroundColor: withAlpha(tint, theme.mode === 'dark' ? 0.16 : 0.07) }}
+    >
       <Column gap={1}>
         <Row gap={1}>
           {emoji ? <Txt size="small">{emoji}</Txt> : null}
@@ -727,7 +746,7 @@ export function StatTile({
             {label}
           </Txt>
         </Row>
-        <Txt size="title" weight="bold" color={color}>
+        <Txt size="title" weight="bold" color={tint}>
           {value}
         </Txt>
       </Column>

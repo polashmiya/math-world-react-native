@@ -337,29 +337,35 @@ export function HomeScreen(): React.JSX.Element {
           action={t('common.seeAll')}
           onAction={() => navigation.navigate('Progress')}
         />
-        <Row gap={3} wrap>
-          <StatTile
-            label={t('progress.questionsSolved')}
-            value={String(dashboard.questionsSolved)}
-            emoji="✅"
-          />
-          <StatTile
-            label={t('common.accuracy')}
-            value={Math.round(dashboard.accuracy * 100) + '%'}
-            emoji="🎯"
-          />
-          <StatTile
-            label={t('home.thinkingScore')}
-            value={String(dashboard.thinkingScore)}
-            emoji="💡"
-            onPress={() => navigation.navigate('Progress')}
-          />
-          <StatTile
-            label={t('progress.averageSpeed')}
-            value={dashboard.averageSpeedMs > 0 ? formatDuration(dashboard.averageSpeedMs) : '—'}
-            emoji="⏱️"
-          />
-        </Row>
+        <FadeInView delay={280}>
+          <Row gap={3} wrap>
+            <StatTile
+              label={t('progress.questionsSolved')}
+              value={String(dashboard.questionsSolved)}
+              emoji="✅"
+              color={theme.colors.success}
+            />
+            <StatTile
+              label={t('common.accuracy')}
+              value={Math.round(dashboard.accuracy * 100) + '%'}
+              emoji="🎯"
+              color={theme.colors.topic.blue}
+            />
+            <StatTile
+              label={t('home.thinkingScore')}
+              value={String(dashboard.thinkingScore)}
+              emoji="💡"
+              color={theme.colors.topic.violet}
+              onPress={() => navigation.navigate('Progress')}
+            />
+            <StatTile
+              label={t('progress.averageSpeed')}
+              value={dashboard.averageSpeedMs > 0 ? formatDuration(dashboard.averageSpeedMs) : '—'}
+              emoji="⏱️"
+              color={theme.colors.topic.orange}
+            />
+          </Row>
+        </FadeInView>
 
         {data.openMistakes > 0 ? (
           <>
