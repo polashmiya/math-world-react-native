@@ -1,4 +1,5 @@
 import {
+  arcLength,
   circleArea,
   circleCircumference,
   coneVolume,
@@ -11,6 +12,7 @@ import {
   pythagorasLeg,
   rectangleArea,
   rectanglePerimeter,
+  sectorArea,
   sphereVolume,
   trapeziumArea,
   triangleArea,
@@ -446,6 +448,87 @@ const heronArea = defineGenerator(
   },
 );
 
+const circles = defineGenerator(
+  {
+    id: 'geo.circles',
+    name: 'Circle Theorems',
+    nameBn: 'বৃত্তের উপপাদ্য',
+    topicId: 'circles',
+    skillIds: ['skill.circle-theorems'],
+    questionType: 'numeric',
+    tags: ['geometry', 'circles'],
+    examIds: ['exam.ssc-math', 'exam.hsc-math'],
+    minDifficulty: 3,
+    maxDifficulty: 8,
+  },
+  ({ rng, difficulty }) => {
+    const kinds = ['arc', 'sector', 'central-angle'] as const;
+    const kind = kinds[rng.int(0, Math.min(kinds.length - 1, Math.floor(difficulty / 3)))];
+
+    if (kind === 'arc') {
+      const r = rng.int(3, 8 + difficulty * 2);
+      const angle = rng.pick([30, 45, 60, 90, 120, 150, 180]);
+      const result = arcLength(r, angle);
+      return {
+        prompt: 'A circle has radius ' + r + ' cm. Find the length of an arc that subtends ' + angle + '° at the centre (π ≈ 3.1416).',
+        promptBn:
+          bn(r) + ' সেমি ব্যাসার্ধের একটি বৃত্তে কেন্দ্রে ' + bn(angle) + '° কোণ উৎপন্নকারী চাপের দৈর্ঘ্য কত? (π ≈ ৩.১৪১৬)',
+        correctAnswer: formatNumber(result.value, 2),
+        choices: numericDistractors(result.value, rng, 3, { min: 0, decimals: 2 }),
+        tolerance: 0.5,
+        params: { kind, r, angle },
+        solutionSteps: result.steps.map((s) => step(s)),
+        explanation: 'An arc is the fraction (θ/360) of the full circumference.',
+        explanationBn: 'চাপ হলো পূর্ণ পরিধির (θ/৩৬০) অংশ।',
+      };
+    }
+    if (kind === 'sector') {
+      const r = rng.int(3, 7 + difficulty * 2);
+      const angle = rng.pick([30, 45, 60, 90, 120, 150]);
+      const result = sectorArea(r, angle);
+      return {
+        prompt: 'A circle has radius ' + r + ' cm. Find the area of a sector with a central angle of ' + angle + '° (π ≈ 3.1416).',
+        promptBn:
+          bn(r) + ' সেমি ব্যাসার্ধের বৃত্তে কেন্দ্রীয় কোণ ' + bn(angle) + '° হলে বৃত্তকলার ক্ষেত্রফল কত? (π ≈ ৩.১৪১৬)',
+        correctAnswer: formatNumber(result.value, 2),
+        choices: numericDistractors(result.value, rng, 3, { min: 0, decimals: 2 }),
+        tolerance: 0.5,
+        params: { kind, r, angle },
+        solutionSteps: result.steps.map((s) => step(s)),
+        explanation: 'A sector is the fraction (θ/360) of the full circle area.',
+        explanationBn: 'বৃত্তকলা হলো পূর্ণ বৃত্তের ক্ষেত্রফলের (θ/৩৬০) অংশ।',
+      };
+    }
+    // The angle a chord subtends at the centre is always twice the angle it
+    // subtends at the circumference (on the same arc).
+    const circumferenceAngle = rng.int(20, 80);
+    const centralAngle = circumferenceAngle * 2;
+    const askCentral = rng.bool(0.6);
+    const answer = askCentral ? centralAngle : circumferenceAngle;
+    return {
+      prompt: askCentral
+        ? 'A chord subtends an angle of ' + circumferenceAngle + '° at the circumference. Find the angle it subtends at the centre.'
+        : 'A chord subtends an angle of ' + centralAngle + '° at the centre. Find the angle it subtends at the circumference.',
+      promptBn: askCentral
+        ? 'একটি জ্যা বৃত্তের পরিধিতে ' + bn(circumferenceAngle) + '° কোণ উৎপন্ন করে। কেন্দ্রে এটি কত কোণ উৎপন্ন করে?'
+        : 'একটি জ্যা কেন্দ্রে ' + bn(centralAngle) + '° কোণ উৎপন্ন করে। পরিধিতে এটি কত কোণ উৎপন্ন করে?',
+      correctAnswer: String(answer),
+      choices: numericDistractors(answer, rng, 3, { integer: true, min: 0 }),
+      params: { kind, circumferenceAngle, askCentral: askCentral ? 1 : 0 },
+      solutionSteps: [
+        step('The angle at the centre is twice the angle at the circumference on the same arc.'),
+        askCentral
+          ? step('centre = 2 × ' + circumferenceAngle + ' = ' + answer + '°')
+          : step('circumference = ' + centralAngle + ' ÷ 2 = ' + answer + '°'),
+      ],
+      explanation: 'This is the Angle at the Centre theorem — one of the classic circle theorems.',
+      explanationBn: 'এটি কেন্দ্রস্থ কোণের উপপাদ্য — বৃত্তের একটি ধ্রুপদী উপপাদ্য।',
+      hints: ['Central angle = 2 × circumference angle.'],
+      hintsBn: ['কেন্দ্রস্থ কোণ = ২ × পরিধিস্থ কোণ।'],
+    };
+  },
+);
+
 export const GEOMETRY_GENERATORS: QuestionGenerator[] = [
   areaPerimeter,
   volumeSurface,
@@ -453,4 +536,5 @@ export const GEOMETRY_GENERATORS: QuestionGenerator[] = [
   angleRules,
   coordinateGeometry,
   heronArea,
+  circles,
 ];

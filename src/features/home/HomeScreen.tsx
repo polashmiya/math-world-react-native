@@ -15,9 +15,11 @@ import {
   Button,
   Card,
   Column,
+  FadeInView,
   Loading,
   MasteryRing,
   ProgressBar,
+  Pulse,
   Row,
   SectionHeader,
   Spacer,
@@ -105,129 +107,145 @@ export function HomeScreen(): React.JSX.Element {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />}
       >
         {/* Greeting and streak */}
-        <Row justify="space-between" align="flex-start">
-          <View style={{ flex: 1 }}>
-            <Txt size="small" color={theme.colors.textMuted}>
-              {t(('greeting.' + greetingKey()) as 'greeting.morning')} 👋
-            </Txt>
-            <Txt size="heading" weight="bold">
-              {name && name.length > 0 ? name : t('common.appName')}
-            </Txt>
-          </View>
-          <Card padded={false} style={{ paddingHorizontal: theme.spacing(3), paddingVertical: theme.spacing(2) }}>
-            <Row gap={1}>
-              <Txt size="bodyLarge">🔥</Txt>
-              <Txt size="bodyLarge" weight="bold">
-                {dashboard.currentStreak}
+        <FadeInView>
+          <Row justify="space-between" align="flex-start">
+            <View style={{ flex: 1 }}>
+              <Txt size="small" color={theme.colors.textMuted}>
+                {t(('greeting.' + greetingKey()) as 'greeting.morning')} 👋
               </Txt>
-            </Row>
-          </Card>
-        </Row>
+              <Txt size="heading" weight="bold">
+                {name && name.length > 0 ? name : t('common.appName')}
+              </Txt>
+            </View>
+            <Card padded={false} style={{ paddingHorizontal: theme.spacing(3), paddingVertical: theme.spacing(2) }}>
+              <Row gap={1}>
+                {dashboard.currentStreak > 0 ? (
+                  <Pulse>
+                    <Txt size="bodyLarge">🔥</Txt>
+                  </Pulse>
+                ) : (
+                  <Txt size="bodyLarge">🔥</Txt>
+                )}
+                <Txt size="bodyLarge" weight="bold">
+                  {dashboard.currentStreak}
+                </Txt>
+              </Row>
+            </Card>
+          </Row>
+        </FadeInView>
 
         <Spacer size={4} />
 
         {/* Today's goal */}
-        <Card accent={theme.colors.primary}>
-          <Column gap={3}>
-            <Row justify="space-between">
-              <Txt size="body" weight="semibold">
-                {t('home.goalToday')}
-              </Txt>
-              <Badge
-                label={
-                  dashboard.currentStreak > 0
-                    ? t('home.streakDays', { count: dashboard.currentStreak })
-                    : t('home.startStreak')
-                }
-                color={theme.colors.accent}
+        <FadeInView delay={60}>
+          <Card accent={theme.colors.primary}>
+            <Column gap={3}>
+              <Row justify="space-between">
+                <Txt size="body" weight="semibold">
+                  {t('home.goalToday')}
+                </Txt>
+                <Badge
+                  label={
+                    dashboard.currentStreak > 0
+                      ? t('home.streakDays', { count: dashboard.currentStreak })
+                      : t('home.startStreak')
+                  }
+                  color={theme.colors.accent}
+                />
+              </Row>
+              <ProgressBar
+                ratio={dailyGoal ? dailyGoal.progress / Math.max(1, dailyGoal.target) : 0}
+                label={t('home.questionsToday', {
+                  done: dailyGoal?.progress ?? 0,
+                  target: dailyGoal?.target ?? 20,
+                })}
+                height={10}
               />
-            </Row>
-            <ProgressBar
-              ratio={dailyGoal ? dailyGoal.progress / Math.max(1, dailyGoal.target) : 0}
-              label={t('home.questionsToday', {
-                done: dailyGoal?.progress ?? 0,
-                target: dailyGoal?.target ?? 20,
-              })}
-              height={10}
-            />
-          </Column>
-        </Card>
+            </Column>
+          </Card>
+        </FadeInView>
 
         <Spacer size={4} />
 
         {/* Continue learning */}
         {continueTarget ? (
-          <Card
-            accent={theme.colors.topic[continueTarget.topic.colorKey]}
-            onPress={() =>
-              continueTarget.lesson
-                ? navigation.navigate('Lesson', { lessonId: continueTarget.lesson.id })
-                : navigation.navigate('TopicDetail', { topicId: continueTarget.topic.id })
-            }
-          >
-            <Row justify="space-between">
-              <Column gap={1} style={{ flex: 1 }}>
-                <Txt size="caption" color={theme.colors.textMuted}>
-                  {t('home.continueLearning')}
-                </Txt>
-                <Txt size="bodyLarge" weight="semibold">
-                  {continueTarget.topic.emoji}{' '}
-                  {pickLocalized(language, continueTarget.topic.name, continueTarget.topic.nameBn)}
-                </Txt>
-                {continueTarget.lesson ? (
-                  <Txt size="small" color={theme.colors.textMuted} numberOfLines={2}>
-                    {pickLocalized(language, continueTarget.lesson.title, continueTarget.lesson.titleBn)}
+          <FadeInView delay={120}>
+            <Card
+              accent={theme.colors.topic[continueTarget.topic.colorKey]}
+              onPress={() =>
+                continueTarget.lesson
+                  ? navigation.navigate('Lesson', { lessonId: continueTarget.lesson.id })
+                  : navigation.navigate('TopicDetail', { topicId: continueTarget.topic.id })
+              }
+            >
+              <Row justify="space-between">
+                <Column gap={1} style={{ flex: 1 }}>
+                  <Txt size="caption" color={theme.colors.textMuted}>
+                    {t('home.continueLearning')}
                   </Txt>
-                ) : null}
-              </Column>
-              <Txt size="heading">▶</Txt>
-            </Row>
-          </Card>
+                  <Txt size="bodyLarge" weight="semibold">
+                    {continueTarget.topic.emoji}{' '}
+                    {pickLocalized(language, continueTarget.topic.name, continueTarget.topic.nameBn)}
+                  </Txt>
+                  {continueTarget.lesson ? (
+                    <Txt size="small" color={theme.colors.textMuted} numberOfLines={2}>
+                      {pickLocalized(language, continueTarget.lesson.title, continueTarget.lesson.titleBn)}
+                    </Txt>
+                  ) : null}
+                </Column>
+                <Txt size="heading">▶</Txt>
+              </Row>
+            </Card>
+          </FadeInView>
         ) : null}
 
         <Spacer size={4} />
 
         {/* Today's Math */}
-        <Card
-          accent={theme.colors.topic.violet}
-          onPress={() => navigation.navigate('Tabs', { screen: 'Brain' })}
-        >
-          <Row justify="space-between">
-            <Column gap={1} style={{ flex: 1 }}>
-              <Txt size="caption" color={theme.colors.textMuted}>
-                {t('home.dailyMath')}
-              </Txt>
-              <Txt size="bodyLarge" weight="semibold">
-                🧠 {data.dailyTotal} {t('common.questions')}
-              </Txt>
-              <ProgressBar
-                ratio={data.dailyTotal === 0 ? 0 : data.dailyDone / data.dailyTotal}
-                color={theme.colors.topic.violet}
-              />
-            </Column>
-          </Row>
-        </Card>
+        <FadeInView delay={160}>
+          <Card
+            accent={theme.colors.topic.violet}
+            onPress={() => navigation.navigate('Tabs', { screen: 'Brain' })}
+          >
+            <Row justify="space-between">
+              <Column gap={1} style={{ flex: 1 }}>
+                <Txt size="caption" color={theme.colors.textMuted}>
+                  {t('home.dailyMath')}
+                </Txt>
+                <Txt size="bodyLarge" weight="semibold">
+                  🧠 {data.dailyTotal} {t('common.questions')}
+                </Txt>
+                <ProgressBar
+                  ratio={data.dailyTotal === 0 ? 0 : data.dailyDone / data.dailyTotal}
+                  color={theme.colors.topic.violet}
+                />
+              </Column>
+            </Row>
+          </Card>
+        </FadeInView>
 
         <Spacer size={4} />
 
         {/* Quick start */}
         <SectionHeader title={t('home.quickStart')} emoji="⚡" />
-        <Row gap={3} wrap>
-          <QuickAction
-            label={t('practice.title')}
-            emoji="✏️"
-            onPress={() =>
-              navigation.navigate('PracticeRun', { mode: 'practice', title: t('practice.quickPractice'), count: 10 })
-            }
-          />
-          <QuickAction
-            label={t('brain.title')}
-            emoji="🧠"
-            onPress={() => navigation.navigate('Tabs', { screen: 'Brain' })}
-          />
-          <QuickAction label={t('exams.title')} emoji="📝" onPress={() => navigation.navigate('Exams')} />
-          <QuickAction label={t('solver.title')} emoji="🧮" onPress={() => navigation.navigate('Solver')} />
-        </Row>
+        <FadeInView delay={200}>
+          <Row gap={3} wrap>
+            <QuickAction
+              label={t('practice.title')}
+              emoji="✏️"
+              onPress={() =>
+                navigation.navigate('PracticeRun', { mode: 'practice', title: t('practice.quickPractice'), count: 10 })
+              }
+            />
+            <QuickAction
+              label={t('brain.title')}
+              emoji="🧠"
+              onPress={() => navigation.navigate('Tabs', { screen: 'Brain' })}
+            />
+            <QuickAction label={t('exams.title')} emoji="📝" onPress={() => navigation.navigate('Exams')} />
+            <QuickAction label={t('solver.title')} emoji="🧮" onPress={() => navigation.navigate('Solver')} />
+          </Row>
+        </FadeInView>
 
         <Spacer size={4} />
 

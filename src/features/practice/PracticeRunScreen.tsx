@@ -16,9 +16,11 @@ import {
   Badge,
   Button,
   Card,
+  Celebration,
   Column,
   DifficultyPill,
   ErrorState,
+  FadeInView,
   Field,
   Loading,
   MathText,
@@ -286,9 +288,11 @@ export function PracticeRunScreen(): React.JSX.Element {
         contentContainerStyle={{ padding: theme.spacing(4), paddingBottom: theme.spacing(10) }}
         showsVerticalScrollIndicator={false}
       >
-        <Card>
-          <MathText size="bodyLarge">{questionPrompt(question, language)}</MathText>
-        </Card>
+        <FadeInView key={question.id}>
+          <Card>
+            <MathText size="bodyLarge">{questionPrompt(question, language)}</MathText>
+          </Card>
+        </FadeInView>
 
         <Spacer size={4} />
 
@@ -393,7 +397,7 @@ export function PracticeRunScreen(): React.JSX.Element {
 
         {/* Feedback and solution */}
         {phase === 'feedback' && result ? (
-          <>
+          <FadeInView key={'feedback-' + question.id} distance={10}>
             <Spacer size={4} />
             <Card
               accent={result.isCorrect ? theme.colors.success : theme.colors.danger}
@@ -402,6 +406,7 @@ export function PracticeRunScreen(): React.JSX.Element {
               }}
             >
               <Column gap={2}>
+                {result.isCorrect ? <Celebration count={12} /> : null}
                 <Row justify="space-between">
                   <Txt size="bodyLarge" weight="bold" color={result.isCorrect ? theme.colors.success : theme.colors.danger}>
                     {result.isCorrect ? '✓ ' + t('common.correct') : '✕ ' + t('common.wrong')}
@@ -435,7 +440,7 @@ export function PracticeRunScreen(): React.JSX.Element {
                 answer={solution.answer}
               />
             </Card>
-          </>
+          </FadeInView>
         ) : null}
       </ScrollView>
 

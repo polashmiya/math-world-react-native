@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
+  Easing,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -18,6 +19,196 @@ import { useTheme } from '../../app/providers/AppProvider';
 import { difficultyColor, masteryColor, type FontSizeToken, type Theme } from '../theme';
 import { formatNumber } from '../../core/utils/format';
 import { formatClock } from '../../core/utils/date';
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+
+/* ── motion ──────────────────────────────────────────────────────────────── */
+
+/**
+ * A gentle press-in/press-out scale used by every tappable surface. Skips the
+ * animation entirely when the user has asked for reduced motion (spec §46).
+ */
+function usePressScale(theme: Theme, pressedScale = 0.97): {
+  value: Animated.Value;
+  onPressIn: () => void;
+  onPressOut: () => void;
+} {
+  const value = useRef(new Animated.Value(1)).current;
+  const onPressIn = (): void => {
+    if (theme.reduceAnimations) return;
+    Animated.timing(value, { toValue: pressedScale, duration: 90, useNativeDriver: true }).start();
+  };
+  const onPressOut = (): void => {
+    if (theme.reduceAnimations) return;
+    Animated.timing(value, { toValue: 1, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
+  };
+  return { value, onPressIn, onPressOut };
+}
+
+/** Soft elevation shared by every card, so the UI reads as layered rather than flat. */
+function cardShadow(theme: Theme): ViewStyle {
+  return {
+    borderRadius: theme.radius.lg,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: theme.mode === 'dark' ? 0.4 : 0.06,
+    shadowRadius: 8,
+    elevation: 3,
+  };
+}
+
+/**
+ * Fades and slides content in on mount. Used for stagger-reveal lists so a
+ * screen feels alive without any layout cost (spec §46 respects reduced motion).
+ */
+export function FadeInView({
+  children,
+  delay = 0,
+  distance = 14,
+  style,
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  distance?: number;
+  style?: StyleProp<ViewStyle>;
+}): React.JSX.Element {
+  const theme = useTheme();
+  const progress = useRef(new Animated.Value(theme.reduceAnimations ? 1 : 0)).current;
+
+  useEffect(() => {
+    if (theme.reduceAnimations) return;
+    const animation = Animated.timing(progress, {
+      toValue: 1,
+      duration: 360,
+      delay,
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <Animated.View
+      style={[
+        {
+          opacity: progress,
+          transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [distance, 0] }) }],
+        },
+        style,
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** A slow, looping scale pulse — used sparingly (streaks, live indicators). */
+export function Pulse({
+  children,
+  scale = 1.08,
+  duration = 900,
+}: {
+  children: React.ReactNode;
+  scale?: number;
+  duration?: number;
+}): React.JSX.Element {
+  const theme = useTheme();
+  const value = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (theme.reduceAnimations) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(value, { toValue: scale, duration, useNativeDriver: true }),
+        Animated.timing(value, { toValue: 1, duration, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [theme.reduceAnimations]);
+
+  return <Animated.View style={{ transform: [{ scale: value }] }}>{children}</Animated.View>;
+}
+
+/**
+ * A small confetti-style burst, fired once on mount — the reward moment at
+ * the end of a session or when an achievement unlocks.
+ */
+export function Celebration({ colors, count = 16 }: { colors?: string[]; count?: number }): React.JSX.Element | null {
+  const theme = useTheme();
+  const palette = useMemo(
+    () =>
+      colors ?? [
+        theme.colors.primary,
+        theme.colors.success,
+        theme.colors.accent,
+        theme.colors.topic.rose,
+        theme.colors.topic.teal,
+      ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colors],
+  );
+  const particles = useMemo(
+    () =>
+      Array.from({ length: count }).map((_, index) => {
+        const angle = (Math.PI * 2 * index) / count + (Math.random() - 0.5) * 0.4;
+        const distance = 60 + Math.random() * 70;
+        return {
+          key: 'p' + index,
+          color: palette[index % palette.length],
+          dx: Math.cos(angle) * distance,
+          dy: Math.sin(angle) * distance - 30,
+          size: 5 + Math.round(Math.random() * 5),
+          progress: new Animated.Value(0),
+        };
+      }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [count, palette],
+  );
+
+  useEffect(() => {
+    if (theme.reduceAnimations) return;
+    const animations = particles.map((particle) =>
+      Animated.timing(particle.progress, { toValue: 1, duration: 700 + Math.random() * 300, useNativeDriver: true }),
+    );
+    const handle = Animated.stagger(12, animations);
+    handle.start();
+    return () => handle.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [particles, theme.reduceAnimations]);
+
+  if (theme.reduceAnimations) return null;
+
+  return (
+    <View
+      pointerEvents="none"
+      style={{ position: 'absolute', top: '50%', left: '50%', width: 0, height: 0 }}
+    >
+      {particles.map((particle) => (
+        <Animated.View
+          key={particle.key}
+          style={{
+            position: 'absolute',
+            width: particle.size,
+            height: particle.size,
+            borderRadius: particle.size / 2,
+            backgroundColor: particle.color,
+            opacity: particle.progress.interpolate({ inputRange: [0, 0.15, 1], outputRange: [0, 1, 0] }),
+            transform: [
+              { translateX: particle.progress.interpolate({ inputRange: [0, 1], outputRange: [0, particle.dx] }) },
+              { translateY: particle.progress.interpolate({ inputRange: [0, 1], outputRange: [0, particle.dy] }) },
+              {
+                scale: particle.progress.interpolate({ inputRange: [0, 0.2, 1], outputRange: [0.4, 1, 0.6] }),
+              },
+            ],
+          }}
+        />
+      ))}
+    </View>
+  );
+}
 
 /* ── layout ──────────────────────────────────────────────────────────────── */
 
@@ -245,7 +436,8 @@ export function Card({
   accessibilityLabel?: string;
 }): React.JSX.Element {
   const theme = useTheme();
-  const body = (
+  const scale = usePressScale(theme);
+  const inner = (
     <View
       style={[
         {
@@ -254,7 +446,6 @@ export function Card({
           borderWidth: 1,
           borderColor: theme.colors.border,
           padding: padded ? theme.spacing(4) : 0,
-          opacity: disabled ? 0.55 : 1,
           overflow: 'hidden',
         },
         accent ? { borderLeftWidth: 4, borderLeftColor: accent } : null,
@@ -264,16 +455,21 @@ export function Card({
       {children}
     </View>
   );
+  const shadow = cardShadow(theme);
 
-  if (!onPress || disabled) return body;
+  if (!onPress || disabled) {
+    return <View style={[shadow, disabled ? { opacity: 0.55 } : null]}>{inner}</View>;
+  }
+
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={scale.onPressIn}
+      onPressOut={scale.onPressOut}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
-      style={({ pressed }) => ({ opacity: pressed && !theme.reduceAnimations ? 0.85 : 1 })}
     >
-      {body}
+      <Animated.View style={[shadow, { transform: [{ scale: scale.value }] }]}>{inner}</Animated.View>
     </Pressable>
   );
 }
@@ -310,43 +506,60 @@ export function Button({
 
   const paddingVertical = size === 'lg' ? theme.spacing(4) : size === 'sm' ? theme.spacing(2) : theme.spacing(3);
   const fontSize: FontSizeToken = size === 'lg' ? 'bodyLarge' : size === 'sm' ? 'small' : 'body';
+  const scale = usePressScale(theme, 0.95);
+  const elevated = (variant === 'primary' || variant === 'danger' || variant === 'success') && !disabled;
 
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={scale.onPressIn}
+      onPressOut={scale.onPressOut}
       disabled={disabled || loading}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ disabled: disabled || loading }}
-      style={({ pressed }) => [
-        {
-          backgroundColor: palette.bg,
-          borderColor: palette.border,
-          borderWidth: 1,
-          borderRadius: theme.radius.md,
-          paddingVertical,
-          paddingHorizontal: theme.spacing(5),
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexDirection: 'row',
-          gap: theme.spacing(2),
-          opacity: disabled ? 0.5 : pressed && !theme.reduceAnimations ? 0.85 : 1,
-          alignSelf: full ? 'stretch' : 'flex-start',
-          minHeight: 44,
-        },
-        style,
-      ]}
+      style={{ alignSelf: full ? 'stretch' : 'flex-start' }}
     >
-      {loading ? (
-        <ActivityIndicator size="small" color={palette.fg} />
-      ) : (
-        <>
-          {icon ? <Txt size={fontSize}>{icon}</Txt> : null}
-          <Txt size={fontSize} weight="semibold" color={palette.fg}>
-            {label}
-          </Txt>
-        </>
-      )}
+      <Animated.View
+        style={[
+          {
+            backgroundColor: palette.bg,
+            borderColor: palette.border,
+            borderWidth: 1,
+            borderRadius: theme.radius.md,
+            paddingVertical,
+            paddingHorizontal: theme.spacing(5),
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexDirection: 'row',
+            gap: theme.spacing(2),
+            opacity: disabled ? 0.5 : 1,
+            minHeight: 44,
+            transform: [{ scale: scale.value }],
+          },
+          elevated
+            ? {
+                shadowColor: palette.bg,
+                shadowOffset: { width: 0, height: 3 },
+                shadowOpacity: theme.mode === 'dark' ? 0.45 : 0.25,
+                shadowRadius: 6,
+                elevation: 3,
+              }
+            : null,
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={palette.fg} />
+        ) : (
+          <>
+            {icon ? <Txt size={fontSize}>{icon}</Txt> : null}
+            <Txt size={fontSize} weight="semibold" color={palette.fg}>
+              {label}
+            </Txt>
+          </>
+        )}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -406,19 +619,28 @@ export function Badge({
 }): React.JSX.Element {
   const theme = useTheme();
   const tint = color ?? theme.colors.primary;
+  const pop = useRef(new Animated.Value(theme.reduceAnimations ? 1 : 0.5)).current;
+
+  useEffect(() => {
+    if (theme.reduceAnimations) return;
+    Animated.timing(pop, { toValue: 1, duration: 220, easing: Easing.out(Easing.back(1.6)), useNativeDriver: true }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <View
+    <Animated.View
       style={{
         backgroundColor: soft ? theme.colors.surfaceAlt : tint,
         borderRadius: theme.radius.sm,
         paddingVertical: theme.spacing(1),
         paddingHorizontal: theme.spacing(2),
+        transform: [{ scale: pop }],
       }}
     >
       <Txt size="caption" weight="semibold" color={soft ? tint : theme.colors.primaryText}>
         {label}
       </Txt>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -437,6 +659,17 @@ export function ProgressBar({
 }): React.JSX.Element {
   const theme = useTheme();
   const clamped = Math.max(0, Math.min(1, ratio));
+  const progress = useRef(new Animated.Value(theme.reduceAnimations ? clamped : 0)).current;
+
+  useEffect(() => {
+    if (theme.reduceAnimations) {
+      progress.setValue(clamped);
+      return;
+    }
+    Animated.timing(progress, { toValue: clamped, duration: 420, useNativeDriver: false }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clamped, theme.reduceAnimations]);
+
   return (
     <View style={{ gap: theme.spacing(1) }}>
       {label ? (
@@ -458,9 +691,9 @@ export function ProgressBar({
           overflow: 'hidden',
         }}
       >
-        <View
+        <Animated.View
           style={{
-            width: (clamped * 100).toFixed(2) + '%' as `${number}%`,
+            width: progress.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }),
             height: '100%',
             backgroundColor: color ?? theme.colors.primary,
             borderRadius: theme.radius.pill,
@@ -519,6 +752,16 @@ export function MasteryRing({
   const radius = (size - thickness) / 2;
   const circumference = 2 * Math.PI * radius;
   const color = masteryColor(theme, clamped);
+  const progress = useRef(new Animated.Value(theme.reduceAnimations ? clamped : 0)).current;
+
+  useEffect(() => {
+    if (theme.reduceAnimations) {
+      progress.setValue(clamped);
+      return;
+    }
+    Animated.timing(progress, { toValue: clamped, duration: 700, useNativeDriver: false }).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clamped, theme.reduceAnimations]);
 
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
@@ -531,7 +774,7 @@ export function MasteryRing({
           strokeWidth={thickness}
           fill="none"
         />
-        <Circle
+        <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
           r={radius}
@@ -540,7 +783,7 @@ export function MasteryRing({
           strokeLinecap="round"
           fill="none"
           strokeDasharray={circumference + ' ' + circumference}
-          strokeDashoffset={circumference * (1 - clamped)}
+          strokeDashoffset={progress.interpolate({ inputRange: [0, 1], outputRange: [circumference, 0] })}
           transform={'rotate(-90 ' + size / 2 + ' ' + size / 2 + ')'}
         />
       </Svg>
@@ -1071,45 +1314,66 @@ export function OptionButton({
     wrong: { bg: theme.colors.dangerSoft, border: theme.colors.danger, fg: theme.colors.text },
   }[state];
 
+  const scale = usePressScale(theme, 0.97);
+  // A little pop when this option resolves to correct/wrong, so the outcome
+  // registers before the reader even parses the checkmark.
+  const pop = useRef(new Animated.Value(1)).current;
+  const previousState = useRef(state);
+  useEffect(() => {
+    if (previousState.current === state) return;
+    previousState.current = state;
+    if (theme.reduceAnimations || state === 'idle' || state === 'selected') return;
+    pop.setValue(1);
+    Animated.sequence([
+      Animated.timing(pop, { toValue: 1.05, duration: 110, useNativeDriver: true }),
+      Animated.timing(pop, { toValue: 1, duration: 160, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    ]).start();
+  }, [state, pop, theme.reduceAnimations]);
+
   return (
     <Pressable
       onPress={onPress}
+      onPressIn={scale.onPressIn}
+      onPressOut={scale.onPressOut}
       disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label + '. ' + text}
       accessibilityState={{ selected: state !== 'idle', disabled }}
-      style={({ pressed }) => ({
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: theme.spacing(3),
-        backgroundColor: palette.bg,
-        borderColor: palette.border,
-        borderWidth: state === 'idle' ? 1 : 2,
-        borderRadius: theme.radius.md,
-        padding: theme.spacing(3),
-        minHeight: 52,
-        opacity: pressed && !disabled && !theme.reduceAnimations ? 0.9 : 1,
-      })}
     >
-      <View
+      <Animated.View
         style={{
-          width: 28,
-          height: 28,
-          borderRadius: theme.radius.pill,
-          backgroundColor: theme.colors.surfaceAlt,
+          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'center',
+          gap: theme.spacing(3),
+          backgroundColor: palette.bg,
+          borderColor: palette.border,
+          borderWidth: state === 'idle' ? 1 : 2,
+          borderRadius: theme.radius.md,
+          padding: theme.spacing(3),
+          minHeight: 52,
+          transform: [{ scale: Animated.multiply(scale.value, pop) }],
         }}
       >
-        <Txt size="small" weight="bold">
-          {label}
-        </Txt>
-      </View>
-      <View style={{ flex: 1 }}>
-        <MathText size="body">{text}</MathText>
-      </View>
-      {state === 'correct' ? <Txt size="bodyLarge">✓</Txt> : null}
-      {state === 'wrong' ? <Txt size="bodyLarge">✕</Txt> : null}
+        <View
+          style={{
+            width: 28,
+            height: 28,
+            borderRadius: theme.radius.pill,
+            backgroundColor: theme.colors.surfaceAlt,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <Txt size="small" weight="bold">
+            {label}
+          </Txt>
+        </View>
+        <View style={{ flex: 1 }}>
+          <MathText size="body">{text}</MathText>
+        </View>
+        {state === 'correct' ? <Txt size="bodyLarge">✓</Txt> : null}
+        {state === 'wrong' ? <Txt size="bodyLarge">✕</Txt> : null}
+      </Animated.View>
     </Pressable>
   );
 }
@@ -1264,15 +1528,15 @@ export function Toast({
   onDismiss: () => void;
 }): React.JSX.Element {
   const theme = useTheme();
-  const opacity = useRef(new Animated.Value(theme.reduceAnimations ? 1 : 0)).current;
+  const progress = useRef(new Animated.Value(theme.reduceAnimations ? 1 : 0)).current;
 
   useEffect(() => {
     if (!theme.reduceAnimations) {
-      Animated.timing(opacity, { toValue: 1, duration: 180, useNativeDriver: true }).start();
+      Animated.timing(progress, { toValue: 1, duration: 220, easing: Easing.out(Easing.back(1.2)), useNativeDriver: true }).start();
     }
     const id = setTimeout(onDismiss, 3200);
     return () => clearTimeout(id);
-  }, [opacity, onDismiss, theme.reduceAnimations]);
+  }, [progress, onDismiss, theme.reduceAnimations]);
 
   const tint = {
     success: theme.colors.success,
@@ -1285,7 +1549,8 @@ export function Toast({
   return (
     <Animated.View
       style={{
-        opacity,
+        opacity: progress,
+        transform: [{ translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) }],
         backgroundColor: theme.colors.surface,
         borderColor: tint,
         borderWidth: 1,
@@ -1293,6 +1558,11 @@ export function Toast({
         borderRadius: theme.radius.md,
         padding: theme.spacing(3),
         marginTop: theme.spacing(2),
+        shadowColor: '#000000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: theme.mode === 'dark' ? 0.4 : 0.1,
+        shadowRadius: 10,
+        elevation: 4,
       }}
     >
       <Txt size="body" weight="semibold" color={tint}>

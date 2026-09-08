@@ -99,6 +99,36 @@ export function circleCircumference(radius: number): GeometryResult {
   };
 }
 
+export function arcLength(radius: number, angleDegrees: number): GeometryResult {
+  requirePositive({ radius, angleDegrees });
+  const value = (angleDegrees / 360) * 2 * Math.PI * radius;
+  return {
+    label: 'Arc length',
+    value,
+    unit: 'units',
+    steps: [
+      'Arc length = (θ / 360) × 2πr',
+      'Arc length = (' + formatNumber(angleDegrees) + ' / 360) × 2π × ' + formatNumber(radius),
+      'Arc length = ' + formatNumber(value, 2),
+    ],
+  };
+}
+
+export function sectorArea(radius: number, angleDegrees: number): GeometryResult {
+  requirePositive({ radius, angleDegrees });
+  const value = (angleDegrees / 360) * Math.PI * radius * radius;
+  return {
+    label: 'Sector area',
+    value,
+    unit: 'sq units',
+    steps: [
+      'Sector area = (θ / 360) × πr²',
+      'Sector area = (' + formatNumber(angleDegrees) + ' / 360) × π × ' + formatNumber(radius) + '²',
+      'Sector area = ' + formatNumber(value, 2),
+    ],
+  };
+}
+
 export function trapeziumArea(a: number, b: number, height: number): GeometryResult {
   requirePositive({ a, b, height });
   const value = 0.5 * (a + b) * height;

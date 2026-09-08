@@ -1,5 +1,5 @@
 import { evaluate } from '../../math/expression';
-import { polyToString } from '../../math/polynomial';
+import { polyEval, polyToString, type Polynomial } from '../../math/polynomial';
 import { formatRoot, tryFactorQuadratic } from '../../math/equation';
 import { formatNumber } from '../../utils/format';
 import { defineGenerator, step, type QuestionGenerator } from '../types';
@@ -683,6 +683,49 @@ const solveSimultaneous = defineGenerator(
   },
 );
 
+const polynomials = defineGenerator(
+  {
+    id: 'alg.polynomials',
+    name: 'Polynomials: Remainder Theorem',
+    nameBn: 'বহুপদী: শেষাংশ উপপাদ্য',
+    topicId: 'polynomials',
+    skillIds: ['skill.polynomial-roots'],
+    questionType: 'numeric',
+    tags: ['algebra', 'polynomials'],
+    examIds: ['exam.hsc-math', 'exam.admission-math'],
+    minDifficulty: 4,
+    maxDifficulty: 8,
+  },
+  ({ rng, difficulty }) => {
+    const degree = difficulty <= 5 ? 2 : 3;
+    const p: Polynomial = Array.from({ length: degree + 1 }, () => rng.int(-6, 6));
+    if (p[degree] === 0) p[degree] = rng.pick([1, 2, -1, -2]);
+    const a = rng.pick([-3, -2, -1, 1, 2, 3]);
+    const remainder = polyEval(p, a);
+    const display = polyToString(p);
+    const divisor = a >= 0 ? '(x - ' + a + ')' : '(x + ' + Math.abs(a) + ')';
+
+    return {
+      prompt:
+        'Find the remainder when p(x) = ' + display + ' is divided by ' + divisor + ', using the Remainder Theorem.',
+      promptBn:
+        'শেষাংশ উপপাদ্য ব্যবহার করে p(x) = ' + display + ' কে ' + divisor + ' দ্বারা ভাগ করলে ভাগশেষ কত?',
+      correctAnswer: String(remainder),
+      choices: numericDistractors(remainder, rng, 3, { integer: true }),
+      params: { coefficients: p.join(','), a },
+      solutionSteps: [
+        step('The Remainder Theorem: dividing p(x) by (x - a) leaves a remainder of p(a).'),
+        step('Here a = ' + a + ', so evaluate p(' + a + ').'),
+        step('p(' + a + ') = ' + remainder),
+      ],
+      explanation: 'Substituting x = a into p(x) gives exactly the remainder of dividing by (x - a) — no long division needed.',
+      explanationBn: 'p(x)-এ x = a বসালে সরাসরি (x - a) দিয়ে ভাগ করার ভাগশেষ পাওয়া যায়, ভাগ করার দরকার নেই।',
+      hints: ['Substitute x = ' + a + ' directly into p(x).'],
+      hintsBn: ['সরাসরি p(x)-এ x = ' + a + ' বসান।'],
+    };
+  },
+);
+
 export const ALGEBRA_GENERATORS: QuestionGenerator[] = [
   solveLinear,
   solveLinearBothSides,
@@ -697,4 +740,5 @@ export const ALGEBRA_GENERATORS: QuestionGenerator[] = [
   numberPattern,
   wordEquation,
   solveSimultaneous,
+  polynomials,
 ];

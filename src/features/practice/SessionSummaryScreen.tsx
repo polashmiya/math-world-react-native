@@ -7,7 +7,9 @@ import { formatDuration } from '../../core/utils/date';
 import {
   Button,
   Card,
+  Celebration,
   Column,
+  FadeInView,
   MasteryRing,
   Row,
   Screen,
@@ -61,34 +63,39 @@ export function SessionSummaryScreen(): React.JSX.Element {
 
   return (
     <Screen scroll>
-      <Card accent={theme.colors.primary}>
-        <Column gap={3} style={{ alignItems: 'center' }}>
-          <Txt size="display">{message}</Txt>
-          <Txt size="title" weight="bold">
-            {t('practice.sessionComplete')}
-          </Txt>
-          <Txt size="small" color={theme.colors.textMuted}>
-            {title}
-          </Txt>
-          <MasteryRing ratio={accuracy} size={96} thickness={9} />
-          <Txt size="bodyLarge" weight="semibold" color={theme.colors.accent}>
-            {t('practice.xpEarned', { xp })}
-          </Txt>
-        </Column>
-      </Card>
+      <FadeInView>
+        <Card accent={theme.colors.primary}>
+          <Column gap={3} style={{ alignItems: 'center' }}>
+            {accuracy >= 0.7 ? <Celebration count={20} /> : null}
+            <Txt size="display">{message}</Txt>
+            <Txt size="title" weight="bold">
+              {t('practice.sessionComplete')}
+            </Txt>
+            <Txt size="small" color={theme.colors.textMuted}>
+              {title}
+            </Txt>
+            <MasteryRing ratio={accuracy} size={96} thickness={9} />
+            <Txt size="bodyLarge" weight="semibold" color={theme.colors.accent}>
+              {t('practice.xpEarned', { xp })}
+            </Txt>
+          </Column>
+        </Card>
+      </FadeInView>
 
       <Spacer size={4} />
 
-      <Row gap={3} wrap>
-        <StatTile label={t('common.correct')} value={correct + ' / ' + answered} emoji="✅" />
-        <StatTile label={t('common.accuracy')} value={Math.round(accuracy * 100) + '%'} emoji="🎯" />
-        <StatTile
-          label={t('progress.averageSpeed')}
-          value={averageTimeMs > 0 ? formatDuration(averageTimeMs) : '—'}
-          emoji="⏱️"
-        />
-        <StatTile label={t('common.streak')} value={String(bestStreak)} emoji="🔥" />
-      </Row>
+      <FadeInView delay={120}>
+        <Row gap={3} wrap>
+          <StatTile label={t('common.correct')} value={correct + ' / ' + answered} emoji="✅" />
+          <StatTile label={t('common.accuracy')} value={Math.round(accuracy * 100) + '%'} emoji="🎯" />
+          <StatTile
+            label={t('progress.averageSpeed')}
+            value={averageTimeMs > 0 ? formatDuration(averageTimeMs) : '—'}
+            emoji="⏱️"
+          />
+          <StatTile label={t('common.streak')} value={String(bestStreak)} emoji="🔥" />
+        </Row>
+      </FadeInView>
 
       {savedLesson ? (
         <>
