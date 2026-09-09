@@ -55,7 +55,6 @@ export interface UserSettings extends SyncMeta {
   soundEnabled: boolean;
   hapticsEnabled: boolean;
   showBanglaDigits: boolean;
-  thinkFirstEnabled: boolean;
   adaptiveDifficultyEnabled: boolean;
   spacedRepetitionEnabled: boolean;
   /** Installed content pack ids (spec §10). */
@@ -71,7 +70,6 @@ export const DEFAULT_SETTINGS: Omit<UserSettings, keyof SyncMeta | 'id'> = {
   soundEnabled: true,
   hapticsEnabled: true,
   showBanglaDigits: true,
-  thinkFirstEnabled: true,
   adaptiveDifficultyEnabled: true,
   spacedRepetitionEnabled: true,
   enabledPackIds: [],

@@ -524,7 +524,7 @@ describe('user repositories', () => {
     expect(profile.language).toBe('bn');
     const settings = await repos.users.getSettings();
     expect(settings.themeMode).toBe('system');
-    expect(settings.thinkFirstEnabled).toBe(true);
+    expect(settings.adaptiveDifficultyEnabled).toBe(true);
 
     await repos.users.updateSettings({ ...settings, largeText: true, language: 'en' });
     const updated = await repos.users.getSettings();

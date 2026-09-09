@@ -36,7 +36,7 @@ import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
-type Phase = 'think' | 'answer' | 'feedback';
+type Phase = 'answer' | 'feedback';
 
 interface Outcome {
   isCorrect: boolean;
@@ -45,8 +45,8 @@ interface Outcome {
 }
 
 /**
- * The practice runner. It owns the question loop and Think First mode, and
- * hands every answer to `PracticeService`, which updates all derived state.
+ * The practice runner. It owns the question loop — one answer per question —
+ * and hands every answer to `PracticeService`, which updates all derived state.
  */
 export function PracticeRunScreen(): React.JSX.Element {
   const route = useRoute<RouteProp<RootStackParamList, 'PracticeRun'>>();
@@ -56,7 +56,6 @@ export function PracticeRunScreen(): React.JSX.Element {
   const theme = useTheme();
   const { t, settings } = useApp();
   const language = settings?.language ?? 'bn';
-  const thinkFirstEnabled = settings?.thinkFirstEnabled ?? true;
 
   const pushToast = useAppStore((state) => state.pushToast);
   const invalidate = useAppStore((state) => state.invalidateData);
@@ -69,7 +68,6 @@ export function PracticeRunScreen(): React.JSX.Element {
   const [phase, setPhase] = useState<Phase>('answer');
   const [answer, setAnswer] = useState('');
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [estimate, setEstimate] = useState('');
   const [hintLevel, setHintLevel] = useState(0);
   const [hintText, setHintText] = useState<string | null>(null);
   const [result, setResult] = useState<SubmitAnswerResult | null>(null);
@@ -135,18 +133,11 @@ export function PracticeRunScreen(): React.JSX.Element {
     questionStartedAt.current = Date.now();
     setAnswer('');
     setSelectedOption(null);
-    setEstimate('');
     setHintLevel(0);
     setHintText(null);
     setResult(null);
-    const wantsThinkFirst =
-      thinkFirstEnabled &&
-      !isChoiceQuestion(question) &&
-      (question.questionType === 'estimation' ||
-        question.questionType === 'word_problem' ||
-        question.questionType === 'numeric');
-    setPhase(wantsThinkFirst ? 'think' : 'answer');
-  }, [question, thinkFirstEnabled]);
+    setPhase('answer');
+  }, [question]);
 
   const solution = useMemo(
     () => (question ? renderSolution(question, language) : null),
@@ -169,7 +160,7 @@ export function PracticeRunScreen(): React.JSX.Element {
         timeSpentMs: Date.now() - questionStartedAt.current,
         hintsUsed: hintLevel,
         mode: params.mode,
-        estimateValue: estimate.trim().length > 0 ? Number(estimate) : null,
+        estimateValue: null,
         strategy: null,
       });
 
@@ -296,83 +287,49 @@ export function PracticeRunScreen(): React.JSX.Element {
 
         <Spacer size={4} />
 
-        {/* Think First: estimate before the exact answer (spec §21) */}
-        {phase === 'think' ? (
-          <Card accent={theme.colors.topic.violet}>
-            <Column gap={3}>
-              <Row gap={2}>
-                <Txt size="bodyLarge">🤔</Txt>
-                <Txt size="body" weight="semibold">
-                  {t('practice.thinkFirst')}
-                </Txt>
-              </Row>
-              <Column gap={2}>
-                <Txt size="small" color={theme.colors.textMuted}>
-                  {t('practice.yourEstimate')}
-                </Txt>
-                <Field
-                  value={estimate}
-                  onChangeText={setEstimate}
-                  keyboardType="decimal-pad"
-                  placeholder="______"
-                  mono
-                />
-              </Column>
-              <Button
-                label={t('practice.solveNow')}
-                full
-                onPress={() => setPhase('answer')}
-                disabled={estimate.trim().length === 0}
-              />
-            </Column>
-          </Card>
-        ) : null}
-
-        {/* Answer input */}
-        {phase !== 'think' ? (
-          choice ? (
-            <Column gap={2}>
-              {(question.options ?? []).map((option, optionIndex) => {
-                const isSelected = selectedOption === option.id;
-                const isAnswer = option.id === question.correctAnswer;
-                const state =
-                  phase === 'feedback'
-                    ? isAnswer
-                      ? 'correct'
-                      : isSelected
-                        ? 'wrong'
-                        : 'idle'
+        {/* Answer input — one answer per question */}
+        {choice ? (
+          <Column gap={2}>
+            {(question.options ?? []).map((option, optionIndex) => {
+              const isSelected = selectedOption === option.id;
+              const isAnswer = option.id === question.correctAnswer;
+              const state =
+                phase === 'feedback'
+                  ? isAnswer
+                    ? 'correct'
                     : isSelected
-                      ? 'selected'
-                      : 'idle';
-                return (
-                  <OptionButton
-                    key={option.id}
-                    label={optionLabel(optionIndex)}
-                    text={optionText(option, language)}
-                    state={state}
-                    disabled={phase === 'feedback'}
-                    onPress={() => setSelectedOption(option.id)}
-                  />
-                );
-              })}
-            </Column>
-          ) : (
-            <Column gap={2}>
-              <Txt size="small" color={theme.colors.textMuted}>
-                {t('practice.yourAnswer')}
-              </Txt>
-              <Field
-                value={phase === 'feedback' ? (result?.attempt.givenAnswer ?? answer) : answer}
-                onChangeText={setAnswer}
-                placeholder={t('practice.typeAnswer')}
-                keyboardType={question.questionType === 'short_answer' ? 'default' : 'decimal-pad'}
-                mono
-                onSubmitEditing={() => void submit()}
-              />
-            </Column>
-          )
-        ) : null}
+                      ? 'wrong'
+                      : 'idle'
+                  : isSelected
+                    ? 'selected'
+                    : 'idle';
+              return (
+                <OptionButton
+                  key={option.id}
+                  label={optionLabel(optionIndex)}
+                  text={optionText(option, language)}
+                  state={state}
+                  disabled={phase === 'feedback'}
+                  onPress={() => setSelectedOption(option.id)}
+                />
+              );
+            })}
+          </Column>
+        ) : (
+          <Column gap={2}>
+            <Txt size="small" color={theme.colors.textMuted}>
+              {t('practice.yourAnswer')}
+            </Txt>
+            <Field
+              value={phase === 'feedback' ? (result?.attempt.givenAnswer ?? answer) : answer}
+              onChangeText={setAnswer}
+              placeholder={t('practice.typeAnswer')}
+              keyboardType={question.questionType === 'short_answer' ? 'default' : 'decimal-pad'}
+              mono
+              onSubmitEditing={() => void submit()}
+            />
+          </Column>
+        )}
 
         {/* Hints */}
         {phase === 'answer' && hints.length + question.solutionSteps.length > 0 ? (
@@ -420,13 +377,6 @@ export function PracticeRunScreen(): React.JSX.Element {
                       : t('practice.correctAnswerIs', { answer: result.expectedAnswer })}
                   </Txt>
                 ) : null}
-                {result.estimateAccuracy !== null ? (
-                  <Txt size="small" color={theme.colors.textMuted}>
-                    {t('practice.estimateClose', {
-                      percent: Math.round(result.estimateAccuracy * 100) + '%',
-                    })}
-                  </Txt>
-                ) : null}
               </Column>
             </Card>
 
@@ -465,7 +415,7 @@ export function PracticeRunScreen(): React.JSX.Element {
             full
             size="lg"
             loading={submitting}
-            disabled={phase === 'think' || (choice ? selectedOption === null : answer.trim().length === 0)}
+            disabled={choice ? selectedOption === null : answer.trim().length === 0}
             onPress={() => void submit()}
           />
         )}

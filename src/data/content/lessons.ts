@@ -983,8 +983,8 @@ const SEEDS: LessonSeed[] = [
         kind: 'practice',
         title: 'Estimate-first practice',
         titleBn: 'আন্দাজ-প্রথম অভ্যাস',
-        body: 'Every question asks for your estimate before the exact answer, then shows how close you were.',
-        bodyBn: 'প্রতিটি প্রশ্নে সঠিক উত্তরের আগে আপনার আন্দাজ চাওয়া হবে, পরে দেখানো হবে কতটা কাছাকাছি ছিলেন।',
+        body: 'Estimate in your head first, then type the exact answer. The solution that follows shows whether your estimate was in the right range.',
+        bodyBn: 'আগে মনে মনে আন্দাজ করুন, তারপর সঠিক উত্তরটি লিখুন। এরপরের সমাধান দেখেই বুঝবেন আপনার আন্দাজ ঠিক সীমার মধ্যে ছিল কি না।',
       },
       {
         kind: 'challenge',

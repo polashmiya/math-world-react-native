@@ -270,11 +270,6 @@ export function ProfileScreen(): React.JSX.Element {
           />
           <Divider />
           <Toggle
-            label={t('profile.thinkFirst')}
-            value={settings.thinkFirstEnabled}
-            onChange={(value) => void updateSettings({ thinkFirstEnabled: value })}
-          />
-          <Toggle
             label={t('profile.adaptiveDifficulty')}
             value={settings.adaptiveDifficultyEnabled}
             onChange={(value) => void updateSettings({ adaptiveDifficultyEnabled: value })}

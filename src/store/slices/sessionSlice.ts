@@ -18,8 +18,7 @@ export interface PracticeSessionState {
   hintsUsed: number;
   startedAtMs: number | null;
   questionStartedAtMs: number | null;
-  /** Think First inputs for the current question. */
-  estimate: string;
+  /** Strategy the learner picked for the current question, when asked. */
   strategy: string | null;
   revealed: boolean;
 }
@@ -35,7 +34,6 @@ export interface SessionSlice {
   nextQuestion: () => void;
   recordAnswer: (record: AnsweredRecord) => void;
   useHint: () => void;
-  setEstimate: (value: string) => void;
   setStrategy: (value: string | null) => void;
   reveal: () => void;
   resetSession: () => void;
@@ -51,7 +49,6 @@ const emptySession = (): PracticeSessionState => ({
   hintsUsed: 0,
   startedAtMs: null,
   questionStartedAtMs: null,
-  estimate: '',
   strategy: null,
   revealed: false,
 });
@@ -83,7 +80,6 @@ export const createSessionSlice: StateCreator<SessionSlice, [], [], SessionSlice
         ...state.session,
         index: state.session.index + 1,
         hintsUsed: 0,
-        estimate: '',
         strategy: null,
         revealed: false,
         questionStartedAtMs: Date.now(),
@@ -97,8 +93,6 @@ export const createSessionSlice: StateCreator<SessionSlice, [], [], SessionSlice
 
   useHint: () =>
     set((state) => ({ session: { ...state.session, hintsUsed: state.session.hintsUsed + 1 } })),
-
-  setEstimate: (value) => set((state) => ({ session: { ...state.session, estimate: value } })),
 
   setStrategy: (value) => set((state) => ({ session: { ...state.session, strategy: value } })),
 

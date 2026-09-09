@@ -549,7 +549,6 @@ export function rowToSettings(row: Row): UserSettings {
     soundEnabled: intToBool(row.sound_enabled),
     hapticsEnabled: intToBool(row.haptics_enabled),
     showBanglaDigits: intToBool(row.show_bangla_digits),
-    thinkFirstEnabled: intToBool(row.think_first_enabled),
     adaptiveDifficultyEnabled: intToBool(row.adaptive_difficulty_enabled),
     spacedRepetitionEnabled: intToBool(row.spaced_repetition_enabled),
     enabledPackIds: parseJsonColumn<string[]>(row.enabled_pack_ids, []),
@@ -567,7 +566,8 @@ export function settingsToRow(item: UserSettings): Row {
     sound_enabled: boolToInt(item.soundEnabled),
     haptics_enabled: boolToInt(item.hapticsEnabled),
     show_bangla_digits: boolToInt(item.showBanglaDigits),
-    think_first_enabled: boolToInt(item.thinkFirstEnabled),
+    // `think_first_enabled` is a retired column. The migration is append-only so
+    // the column stays; it is left to its DEFAULT and nothing reads it.
     adaptive_difficulty_enabled: boolToInt(item.adaptiveDifficultyEnabled),
     spaced_repetition_enabled: boolToInt(item.spacedRepetitionEnabled),
     enabled_pack_ids: jsonColumn(item.enabledPackIds),
