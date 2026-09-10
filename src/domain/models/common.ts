@@ -16,7 +16,7 @@ export interface SyncMeta {
 
 export type SyncStatus = 'local' | 'pending' | 'synced' | 'conflict';
 
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 export const CURRENT_CONTENT_VERSION = 1;
 
 export function newSyncMeta(now = Date.now()): SyncMeta {

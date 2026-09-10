@@ -30,6 +30,7 @@ import {
   Stepper,
   Txt,
 } from '../../ui/components';
+import { streakRate, useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -65,6 +66,8 @@ export function GamesScreen(): React.JSX.Element {
           <Card
             key={game.id}
             accent={theme.colors.topic.violet}
+            // Plain tap here — `GamePlayScreen` plays the start whoosh once the
+            // run actually exists, and two in a row would just sound broken.
             onPress={() => navigation.navigate('GamePlay', { kind: game.kind })}
           >
             <Row gap={3} align="flex-start">
@@ -112,6 +115,7 @@ export function GamePlayScreen(): React.JSX.Element {
   const theme = useTheme();
   const { t, settings } = useApp();
   const language = settings?.language ?? 'bn';
+  const { play } = useSound();
   const invalidate = useAppStore((state) => state.invalidateData);
   const pushToast = useAppStore((state) => state.pushToast);
 
@@ -133,11 +137,12 @@ export function GamePlayScreen(): React.JSX.Element {
     if (!started) return;
     setGame(started.game);
     setState(started.state);
+    play('start');
     const first = await services.games.nextRound(started.game, started.state, 0);
     setQuestion(first?.question ?? null);
     const scores = await services.repositories.games.getHighScores();
     setBestScore(scores.find((entry) => entry.gameKind === route.params.kind)?.bestScore ?? 0);
-  }, [services, route.params.kind]);
+  }, [services, route.params.kind, play]);
 
   useEffect(() => {
     void startRun();
@@ -155,10 +160,13 @@ export function GamePlayScreen(): React.JSX.Element {
       setFinalScore(record.score);
       invalidate();
       if (record.score > bestScore) {
+        play('record');
         pushToast({ kind: 'success', title: '🏆 ' + t('games.newRecord') });
+      } else {
+        play('complete');
       }
     },
-    [services, invalidate, bestScore, pushToast, t],
+    [services, invalidate, bestScore, pushToast, play, t],
   );
 
   const answer = async (given: string): Promise<void> => {
@@ -166,6 +174,16 @@ export function GamePlayScreen(): React.JSX.Element {
     const applied = services.games.answerRound(game, state, question, given);
     setState(applied.state);
     setTyped('');
+
+    // A game combo climbs faster than a practice streak: the whole run is over
+    // in a minute, so the ladder has to be audible inside one.
+    if (!applied.isCorrect) {
+      play('incorrect');
+    } else if (applied.state.combo >= 3) {
+      play('streak', { rate: streakRate(applied.state.combo - 1) });
+    } else {
+      play('correct');
+    }
 
     if (applied.state.finished) {
       await finish(applied.state);
@@ -210,7 +228,7 @@ export function GamePlayScreen(): React.JSX.Element {
 
         <Spacer size={5} />
         <Column gap={3}>
-          <Button label={t('games.playAgain')} icon="🔁" full size="lg" onPress={() => void startRun()} />
+          <Button label={t('games.playAgain')} icon="🔁" full size="lg" sound={null} onPress={() => void startRun()} />
           <Button label={t('common.done')} variant="secondary" full onPress={() => navigation.goBack()} />
         </Column>
       </Screen>
@@ -260,6 +278,8 @@ export function GamePlayScreen(): React.JSX.Element {
                     key={option.id}
                     label={optionLabel(optionIndex)}
                     text={optionText(option, language)}
+                    // A tap is judged immediately here; the verdict is the sound.
+                    sound={null}
                     onPress={() => void answer(option.id)}
                   />
                 ))}
@@ -279,6 +299,7 @@ export function GamePlayScreen(): React.JSX.Element {
                   label={t('common.check')}
                   full
                   size="lg"
+                  sound={null}
                   disabled={typed.trim().length === 0}
                   onPress={() => void answer(typed)}
                 />

@@ -1,3 +1,9 @@
+import {
+  DEFAULT_SOUND_VOLUME,
+  clampSoundVolume,
+  isFontScale,
+  type FontScale,
+} from '../../../core/constants/accessibility';
 import type { AcademicLevel, CurriculumCode, ExamFamily, Language } from '../../../core/constants/levels';
 import type { BrainCategory, FormulaCategory, ThinkingDimension, TournamentTier } from '../../../core/constants/categories';
 import { THINKING_DIMENSIONS } from '../../../core/constants/categories';
@@ -537,6 +543,17 @@ export function profileToRow(item: UserProfile): Row {
   };
 }
 
+/**
+ * Rows written before migration 007 have an empty `font_scale`. Those users
+ * already told us how they wanted to read, through the old two-state toggle —
+ * so honour it rather than resetting them to the default.
+ */
+function readFontScale(row: Row): FontScale {
+  const stored = toText(row.font_scale, '');
+  if (isFontScale(stored)) return stored;
+  return intToBool(row.large_text) ? 'large' : 'medium';
+}
+
 export function rowToSettings(row: Row): UserSettings {
   return {
     ...readSyncMeta(row),
@@ -545,8 +562,10 @@ export function rowToSettings(row: Row): UserSettings {
     themeMode: toText(row.theme_mode, 'system') as UserSettings['themeMode'],
     reduceAnimations: intToBool(row.reduce_animations),
     largeText: intToBool(row.large_text),
+    fontScale: readFontScale(row),
     highContrast: intToBool(row.high_contrast),
     soundEnabled: intToBool(row.sound_enabled),
+    soundVolume: clampSoundVolume(toNumber(row.sound_volume, DEFAULT_SOUND_VOLUME)),
     hapticsEnabled: intToBool(row.haptics_enabled),
     showBanglaDigits: intToBool(row.show_bangla_digits),
     adaptiveDifficultyEnabled: intToBool(row.adaptive_difficulty_enabled),
@@ -562,8 +581,10 @@ export function settingsToRow(item: UserSettings): Row {
     theme_mode: item.themeMode,
     reduce_animations: boolToInt(item.reduceAnimations),
     large_text: boolToInt(item.largeText),
+    font_scale: item.fontScale,
     high_contrast: boolToInt(item.highContrast),
     sound_enabled: boolToInt(item.soundEnabled),
+    sound_volume: clampSoundVolume(item.soundVolume),
     haptics_enabled: boolToInt(item.hapticsEnabled),
     show_bangla_digits: boolToInt(item.showBanglaDigits),
     // `think_first_enabled` is a retired column. The migration is append-only so

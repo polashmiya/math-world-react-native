@@ -31,6 +31,7 @@ import {
   StatTile,
   Txt,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -45,6 +46,7 @@ export function ChallengesScreen(): React.JSX.Element {
   const dataVersion = useAppStore((state) => state.dataVersion);
   const invalidate = useAppStore((state) => state.invalidateData);
   const pushToast = useAppStore((state) => state.pushToast);
+  const { play } = useSound();
 
   const [bosses, setBosses] = useState<ChallengeEntry[] | null>(null);
   const [missions, setMissions] = useState<MissionEntry[]>([]);
@@ -74,6 +76,7 @@ export function ChallengesScreen(): React.JSX.Element {
   const claim = async (entry: MissionEntry): Promise<void> => {
     const xp = await services.challenges.claimMission(entry.mission);
     if (xp > 0) {
+      play('reward');
       pushToast({ kind: 'success', title: '+' + xp + ' ' + t('common.xp') });
       invalidate();
       await load();
@@ -259,6 +262,7 @@ export function BossBattleScreen(): React.JSX.Element {
   const language = settings?.language ?? 'bn';
   const invalidate = useAppStore((state) => state.invalidateData);
   const pushToast = useAppStore((state) => state.pushToast);
+  const { play } = useSound();
 
   const [challenge, setChallenge] = useState<Challenge | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -284,7 +288,8 @@ export function BossBattleScreen(): React.JSX.Element {
     if (!started) return;
     setChallenge(started.challenge);
     setQuestions(started.questions);
-  }, [services, route.params.challengeId]);
+    play('start');
+  }, [services, route.params.challengeId, play]);
 
   useEffect(() => {
     void start();
@@ -310,10 +315,13 @@ export function BossBattleScreen(): React.JSX.Element {
       setOutcome({ passed: result.passed, xp: result.xpEarned });
       invalidate();
       if (result.passed) {
+        play('achievement');
         pushToast({ kind: 'achievement', title: '🏅 ' + t('challenges.defeated') });
+      } else {
+        play('complete');
       }
     },
-    [challenge, services, questions.length, invalidate, pushToast, t],
+    [challenge, services, questions.length, invalidate, pushToast, play, t],
   );
 
   const answer = async (given: string): Promise<void> => {
@@ -321,6 +329,7 @@ export function BossBattleScreen(): React.JSX.Element {
     const isCorrect = validateAnswer(question, given).isCorrect;
     const nextCorrect = correct + (isCorrect ? 1 : 0);
     setCorrect(nextCorrect);
+    play(isCorrect ? 'correct' : 'incorrect');
 
     // Attempts still count towards mastery and the mistake bank.
     await services.practice.submitAnswer({
@@ -343,6 +352,7 @@ export function BossBattleScreen(): React.JSX.Element {
 
   const showHint = async (): Promise<void> => {
     if (!question || !challenge || hintsUsed >= challenge.hintsAllowed) return;
+    play('hint');
     const nextLevel = hintsUsed + 1;
     setHintsUsed(nextLevel);
     setHintText(await services.repositories.tutor.giveHint(question, nextLevel));
@@ -371,7 +381,7 @@ export function BossBattleScreen(): React.JSX.Element {
         </Card>
         <Spacer size={5} />
         <Column gap={3}>
-          <Button label={t('common.retry')} icon="🔁" full size="lg" onPress={() => void start()} />
+          <Button label={t('common.retry')} icon="🔁" full size="lg" sound={null} onPress={() => void start()} />
           <Button label={t('common.done')} variant="secondary" full onPress={() => navigation.goBack()} />
         </Column>
       </Screen>

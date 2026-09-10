@@ -20,6 +20,7 @@ import {
   Txt,
   LessonVisualView,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -34,6 +35,7 @@ export function LessonScreen(): React.JSX.Element {
   const services = useServices();
   const theme = useTheme();
   const { t, settings } = useApp();
+  const { play } = useSound();
   const language = settings?.language ?? 'bn';
   const invalidate = useAppStore((state) => state.invalidateData);
 
@@ -89,6 +91,8 @@ export function LessonScreen(): React.JSX.Element {
 
   const finishLesson = async (): Promise<void> => {
     await services.learning.completeLesson(lesson, completed ? 1 : 0.7);
+    // Finishing a lesson is the moment the next one opens up.
+    if (!completed) play('unlock');
     invalidate();
     navigation.goBack();
   };
@@ -155,6 +159,7 @@ export function LessonScreen(): React.JSX.Element {
           icon={section.kind === 'challenge' ? '🔥' : '✏️'}
           full
           size="lg"
+          // The practice runner plays the start whoosh when the set arrives.
           onPress={startPractice}
         />
       ) : null}
@@ -173,6 +178,7 @@ export function LessonScreen(): React.JSX.Element {
           <Button
             label={completed ? t('common.done') : t('learn.lessonComplete')}
             variant="success"
+            sound={completed ? 'tap' : null}
             onPress={finishLesson}
             style={{ flex: 1 }}
           />

@@ -1,3 +1,4 @@
+import { clampSoundVolume, type FontScale } from '../../core/constants/accessibility';
 import type { Language } from '../../core/constants/levels';
 import type { DifficultyBand } from '../../core/constants/difficulty';
 import { touchSyncMeta } from '../models';
@@ -79,6 +80,16 @@ export class ProfileService {
   async updateSettings(changes: Partial<Omit<UserSettings, 'id'>>, now = Date.now()): Promise<UserSettings> {
     const settings = await this.repos.users.getSettings();
     const updated: UserSettings = { ...touchSyncMeta(settings, now), ...changes };
+
+    if (changes.fontScale) {
+      // `largeText` is the retired two-state version of the same preference.
+      // Keeping it in step means a downgrade still reads a sensible value.
+      updated.largeText = changes.fontScale === 'large' || changes.fontScale === 'xLarge';
+    }
+    if (changes.soundVolume !== undefined) {
+      updated.soundVolume = clampSoundVolume(changes.soundVolume);
+    }
+
     await this.repos.users.updateSettings(updated);
 
     if (changes.language && changes.language !== settings.language) {
@@ -90,6 +101,19 @@ export class ProfileService {
 
   async setLanguage(language: Language): Promise<void> {
     await this.updateSettings({ language });
+  }
+
+  async setFontScale(fontScale: FontScale): Promise<void> {
+    await this.updateSettings({ fontScale });
+  }
+
+  async setSoundEnabled(soundEnabled: boolean): Promise<void> {
+    await this.updateSettings({ soundEnabled });
+  }
+
+  /** Volume is 0..100; anything outside is clamped rather than rejected. */
+  async setSoundVolume(soundVolume: number): Promise<void> {
+    await this.updateSettings({ soundVolume });
   }
 
   async setDifficultyPreference(preference: DifficultyBand | 'adaptive'): Promise<void> {

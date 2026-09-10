@@ -211,8 +211,52 @@ Aimed at low-end Android:
   data stays in SQLite behind the repositories.
 - `FlatList` with windowing for the skill tree; charts are plain views with no
   animation loops.
-- `reduceAnimations`, `largeText` and `highContrast` are real settings that the
+- `reduceAnimations`, `fontScale` and `highContrast` are real settings that the
   theme and components honour.
+
+---
+
+## Sound
+
+Nineteen effects, all synthesised offline by `scripts/generate-sounds.mjs`
+(`npm run sounds:build`) rather than licensed from a sound library — warm bell
+chimes on a major scale for anything positive, a soft low bonk for anything
+wrong, and clicks quiet enough to sit under a hundred taps an hour. Regenerating
+is deterministic: the same script always produces byte-identical WAV files.
+
+```
+src/ui/sound/catalogue.ts    the names, the assets, and how many can overlap
+src/ui/sound/engine.ts       the expo-audio wrapper
+src/ui/sound/SoundProvider.tsx  binds the engine to the user's settings
+```
+
+Three rules hold:
+
+1. **Presses make their own sound.** `Button`, `Card`, `Chip`, `OptionButton`
+   and `Toggle` play a tap from inside the component, so a screen only ever
+   names the sounds that carry meaning — `play('correct')`, `play('levelUp')`.
+   Pass `sound={null}` to a control whose outcome is the sound instead.
+2. **Audio is never load-bearing.** `expo-audio` is resolved with a `require`
+   inside a `try`, every call is wrapped, and a failure downgrades the engine to
+   silent for the session. A device with no working audio loses no
+   functionality, and neither does a jest run.
+3. **The system's silent switch wins.** `playsInSilentMode` is `false` and the
+   session is `mixWithOthers`, so a silenced phone stays silent and a podcast
+   playing underneath is never interrupted.
+
+Users control it from Profile → Settings: an on/off switch and a volume in
+ten-point steps, both of which preview themselves at the level being chosen.
+
+---
+
+## Text size
+
+Five steps — very small to very large — stored as `UserSettings.fontScale` and
+applied by `createTheme` to *every* type token, not just body copy. The picker
+draws each option at the size it selects. The retired two-state `largeText`
+column is kept in step by `ProfileService` so a downgrade still reads a sensible
+value, and settings rows written before migration 007 carry their old toggle
+forward instead of silently resetting.
 
 ---
 
@@ -225,9 +269,10 @@ __tests__/engine/dataLayer.test.ts           migrations, seeding, repositories (
 __tests__/engine/services.test.ts            use cases end to end
 __tests__/engine/contentValidation.test.ts   the content validation entry point
 __tests__/ui/components.test.tsx             component + accessibility tests
+__tests__/ui/sound.test.tsx                  the sound engine and its controls
 ```
 
-682 tests. The generator suite alone asserts, for every generator at every
+746 tests. The generator suite alone asserts, for every generator at every
 difficulty in its range and across multiple seeds, that the question has a
 prompt in both languages, ordered solution steps, distinct options containing
 the answer, and that the validator accepts its own answer and rejects a wrong

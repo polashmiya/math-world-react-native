@@ -22,6 +22,7 @@ import {
   Spacer,
   Txt,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -32,6 +33,7 @@ export function MistakesScreen(): React.JSX.Element {
   const services = useServices();
   const theme = useTheme();
   const { t, settings } = useApp();
+  const { play } = useSound();
   const language = settings?.language ?? 'bn';
   const dataVersion = useAppStore((state) => state.dataVersion);
   const invalidate = useAppStore((state) => state.invalidateData);
@@ -65,6 +67,7 @@ export function MistakesScreen(): React.JSX.Element {
   };
 
   const explain = async (mistake: Mistake, question: Question): Promise<void> => {
+    play('reveal');
     const attempts = await services.repositories.attempts.getAttempts({
       questionIds: [question.id],
       isCorrect: false,

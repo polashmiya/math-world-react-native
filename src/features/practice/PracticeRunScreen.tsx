@@ -32,6 +32,7 @@ import {
   Spacer,
   Txt,
 } from '../../ui/components';
+import { streakRate, useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -57,6 +58,7 @@ export function PracticeRunScreen(): React.JSX.Element {
   const { t, settings } = useApp();
   const language = settings?.language ?? 'bn';
 
+  const { play } = useSound();
   const pushToast = useAppStore((state) => state.pushToast);
   const invalidate = useAppStore((state) => state.invalidateData);
 
@@ -76,6 +78,7 @@ export function PracticeRunScreen(): React.JSX.Element {
 
   const questionStartedAt = useRef(Date.now());
   const sessionStartedAt = useRef(Date.now());
+  const started = useRef(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -125,6 +128,14 @@ export function PracticeRunScreen(): React.JSX.Element {
     navigation.setOptions({ title: params.title });
   }, [navigation, params.title]);
 
+  // The one-off "we are off" whoosh. Guarded by a ref because `play` changes
+  // identity whenever the volume does, and a session starts exactly once.
+  useEffect(() => {
+    if (started.current || !questions || questions.length === 0) return;
+    started.current = true;
+    play('start');
+  }, [questions, play]);
+
   const question = questions?.[index] ?? null;
 
   // Reset per-question state whenever the question changes.
@@ -143,6 +154,16 @@ export function PracticeRunScreen(): React.JSX.Element {
     () => (question ? renderSolution(question, language) : null),
     [question, language],
   );
+
+  /** Correct answers at the tail of this run — the live streak. */
+  const currentStreak = (): number => {
+    let streak = 0;
+    for (let i = outcomes.length - 1; i >= 0; i -= 1) {
+      if (!outcomes[i].isCorrect) break;
+      streak += 1;
+    }
+    return streak;
+  };
 
   const submit = async (): Promise<void> => {
     if (!question || submitting) return;
@@ -175,12 +196,25 @@ export function PracticeRunScreen(): React.JSX.Element {
         },
       ]);
 
+      // Three right in a row earns the brighter chime, and every answer after
+      // that lifts its pitch — the run has to sound like it is going somewhere.
+      const streak = submitted.isCorrect ? currentStreak() + 1 : 0;
+      if (!submitted.isCorrect) {
+        play('incorrect');
+      } else if (streak >= 3) {
+        play('streak', { rate: streakRate(streak - 2) });
+      } else {
+        play('correct');
+      }
+
       if (submitted.newLevel) {
+        play('levelUp');
         pushToast({ kind: 'success', title: t('common.level') + ' ' + submitted.newLevel + ' 🎉' });
       }
       for (const code of submitted.unlockedAchievementCodes) {
         const achievement = achievementByCode(code);
         if (achievement) {
+          play('achievement');
           pushToast({
             kind: 'achievement',
             title: achievement.emoji + ' ' + pickLocalized(language, achievement.name, achievement.nameBn),
@@ -189,6 +223,7 @@ export function PracticeRunScreen(): React.JSX.Element {
         }
       }
       if (submitted.mistakeResolved) {
+        play('reward');
         pushToast({ kind: 'success', title: t('mistakes.resolved') });
       }
     } catch (e) {
@@ -200,6 +235,7 @@ export function PracticeRunScreen(): React.JSX.Element {
 
   const showHint = async (): Promise<void> => {
     if (!question) return;
+    play('hint');
     const nextLevel = hintLevel + 1;
     setHintLevel(nextLevel);
     setHintText(await services.repositories.tutor.giveHint(question, nextLevel));

@@ -25,6 +25,13 @@ import Svg, {
   Stop,
 } from 'react-native-svg';
 import { useTheme } from '../../app/providers/AppProvider';
+import {
+  FONT_SCALES,
+  FONT_SCALE_FACTORS,
+  SOUND_VOLUME_STEP,
+  type FontScale,
+} from '../../core/constants/accessibility';
+import { useSound, type SoundName } from '../sound';
 import { difficultyColor, masteryColor, type FontSizeToken, type Theme } from '../theme';
 import { formatNumber } from '../../core/utils/format';
 import { formatClock } from '../../core/utils/date';
@@ -52,6 +59,26 @@ function usePressScale(theme: Theme, pressedScale = 0.97): {
     Animated.timing(value, { toValue: 1, duration: 140, easing: Easing.out(Easing.quad), useNativeDriver: true }).start();
   };
   return { value, onPressIn, onPressOut };
+}
+
+/**
+ * Gives a tappable surface its own voice.
+ *
+ * Every press in the app makes a sound from here rather than from the screen
+ * that owns the handler, so a feature only ever has to name the sounds that
+ * carry meaning — an answer being right, a level arriving — and never the tap.
+ * Pass `null` to opt one control out.
+ */
+function usePressWithSound(
+  onPress: (() => void) | undefined,
+  sound: SoundName | null,
+): (() => void) | undefined {
+  const { play } = useSound();
+  if (!onPress) return undefined;
+  return () => {
+    if (sound) play(sound);
+    onPress();
+  };
 }
 
 /** Mixes a theme hex color with the card surface at a low alpha for a soft tint. */
@@ -512,6 +539,7 @@ export function Card({
   padded = true,
   style,
   accessibilityLabel,
+  sound = 'tap',
 }: {
   children: React.ReactNode;
   onPress?: () => void;
@@ -520,9 +548,12 @@ export function Card({
   padded?: boolean;
   style?: StyleProp<ViewStyle>;
   accessibilityLabel?: string;
+  /** Effect for the press. `null` for a card that should stay silent. */
+  sound?: SoundName | null;
 }): React.JSX.Element {
   const theme = useTheme();
   const scale = usePressScale(theme);
+  const press = usePressWithSound(onPress, sound);
   // `style` must land on this same view (not a wrapper) — callers rely on it
   // for layout (flex/minWidth in grids), padding (padded=false + custom
   // padding) and visual overrides (backgroundColor banners) all at once.
@@ -551,7 +582,7 @@ export function Card({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={press}
       onPressIn={scale.onPressIn}
       onPressOut={scale.onPressOut}
       accessibilityRole="button"
@@ -572,6 +603,7 @@ export function Button({
   icon,
   full = false,
   style,
+  sound = 'tap',
 }: {
   label: string;
   onPress: () => void;
@@ -582,8 +614,11 @@ export function Button({
   icon?: string;
   full?: boolean;
   style?: StyleProp<ViewStyle>;
+  /** Effect for the press — `'start'` for a run, `null` to stay silent. */
+  sound?: SoundName | null;
 }): React.JSX.Element {
   const theme = useTheme();
+  const press = usePressWithSound(onPress, sound);
   const palette = {
     primary: { bg: theme.colors.primary, fg: theme.colors.primaryText, border: theme.colors.primary },
     secondary: { bg: theme.colors.surfaceAlt, fg: theme.colors.text, border: theme.colors.border },
@@ -599,7 +634,7 @@ export function Button({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={press}
       onPressIn={scale.onPressIn}
       onPressOut={scale.onPressOut}
       disabled={disabled || loading}
@@ -658,14 +693,17 @@ export function Chip({
   onPress,
   color,
   emoji,
+  sound = 'tap',
 }: {
   label: string;
   selected?: boolean;
   onPress?: () => void;
   color?: string;
   emoji?: string;
+  sound?: SoundName | null;
 }): React.JSX.Element {
   const theme = useTheme();
+  const press = usePressWithSound(onPress, sound);
   const tint = color ?? theme.colors.primary;
   const body = (
     <View
@@ -690,7 +728,7 @@ export function Chip({
   );
   if (!onPress) return body;
   return (
-    <Pressable onPress={onPress} accessibilityRole="button" accessibilityState={{ selected }}>
+    <Pressable onPress={press} accessibilityRole="button" accessibilityState={{ selected }}>
       {body}
     </Pressable>
   );
@@ -1181,16 +1219,28 @@ export function Toggle({
   value,
   onChange,
   detail,
+  sound = 'toggle',
 }: {
   label: string;
   value: boolean;
   onChange: (next: boolean) => void;
   detail?: string;
+  /**
+   * `null` for the sound switch itself, which has to make its own noise: the
+   * generic effect is suppressed while sound is off, so it would confirm being
+   * turned off and stay silent about being turned on — exactly backwards.
+   */
+  sound?: SoundName | null;
 }): React.JSX.Element {
   const theme = useTheme();
+  const { play } = useSound();
   return (
     <Pressable
-      onPress={() => onChange(!value)}
+      onPress={() => {
+        // Down for off, up for on.
+        if (sound) play(sound, { rate: value ? 0.85 : 1.15 });
+        onChange(!value);
+      }}
       accessibilityRole="switch"
       accessibilityState={{ checked: value }}
       accessibilityLabel={label}
@@ -1392,14 +1442,17 @@ export function OptionButton({
   onPress,
   state = 'idle',
   disabled = false,
+  sound = 'select',
 }: {
   label: string;
   text: string;
   onPress: () => void;
   state?: 'idle' | 'selected' | 'correct' | 'wrong';
   disabled?: boolean;
+  sound?: SoundName | null;
 }): React.JSX.Element {
   const theme = useTheme();
+  const press = usePressWithSound(onPress, sound);
   const palette = {
     idle: { bg: theme.colors.surface, border: theme.colors.border, fg: theme.colors.text },
     selected: { bg: theme.colors.primarySoft, border: theme.colors.primary, fg: theme.colors.text },
@@ -1425,7 +1478,7 @@ export function OptionButton({
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={press}
       onPressIn={scale.onPressIn}
       onPressOut={scale.onPressOut}
       disabled={disabled}
@@ -1553,13 +1606,29 @@ export function Countdown({
   label?: string;
 }): React.JSX.Element {
   const theme = useTheme();
+  const { play } = useSound();
   const [remaining, setRemaining] = useState(seconds);
   const expired = useRef(false);
+  const announced = useRef(false);
 
   useEffect(() => {
     setRemaining(seconds);
     expired.current = false;
+    announced.current = false;
   }, [seconds]);
+
+  // The last five seconds tick, and running out is announced. Anything longer
+  // than five would turn a twenty-minute exam into a metronome.
+  useEffect(() => {
+    if (!running || announced.current) return;
+    if (remaining === 0) {
+      // A timer that was handed zero seconds never ran out; it never ran.
+      announced.current = true;
+      if (seconds > 0) play('timeUp');
+      return;
+    }
+    if (remaining <= 5) play('tick', { rate: 1 + (5 - remaining) * 0.05 });
+  }, [remaining, running, seconds, play]);
 
   useEffect(() => {
     if (!running) return;
@@ -1671,6 +1740,139 @@ export function Toast({
 }
 
 /** Horizontal chip strip used for filters. */
+/* ── settings controls ───────────────────────────────────────────────────── */
+
+/**
+ * The text-size picker.
+ *
+ * Each option is drawn at the size it selects, so the control demonstrates its
+ * own effect — which matters most for the person who needs the largest step and
+ * cannot comfortably read the label explaining it.
+ */
+export function FontScalePicker({
+  value,
+  onChange,
+  labelFor,
+}: {
+  value: FontScale;
+  onChange: (next: FontScale) => void;
+  labelFor: (scale: FontScale) => string;
+}): React.JSX.Element {
+  const theme = useTheme();
+
+  return (
+    <Row gap={2} wrap>
+      {FONT_SCALES.map((scale) => {
+        const selected = scale === value;
+        // Deliberately not `theme.font.size`: the sample must show the size it
+        // offers, not the size already in force.
+        const sampleSize = Math.round(15 * FONT_SCALE_FACTORS[scale]);
+        return (
+          <Pressable
+            key={scale}
+            onPress={() => onChange(scale)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected }}
+            accessibilityLabel={labelFor(scale)}
+            style={{
+              flexGrow: 1,
+              minWidth: 62,
+              alignItems: 'center',
+              gap: theme.spacing(1),
+              paddingVertical: theme.spacing(2),
+              paddingHorizontal: theme.spacing(2),
+              borderRadius: theme.radius.md,
+              borderWidth: selected ? 2 : 1,
+              borderColor: selected ? theme.colors.primary : theme.colors.border,
+              backgroundColor: selected ? theme.colors.primarySoft : theme.colors.surfaceAlt,
+              minHeight: 64,
+              justifyContent: 'center',
+            }}
+          >
+            <Txt
+              size="title"
+              weight="bold"
+              color={selected ? theme.colors.primary : theme.colors.text}
+              style={{ fontSize: sampleSize + 8, lineHeight: Math.round((sampleSize + 8) * 1.2) }}
+            >
+              A
+            </Txt>
+            <Txt
+              size="caption"
+              align="center"
+              color={selected ? theme.colors.primary : theme.colors.textMuted}
+            >
+              {labelFor(scale)}
+            </Txt>
+          </Pressable>
+        );
+      })}
+    </Row>
+  );
+}
+
+/**
+ * Volume in ten-point steps.
+ *
+ * A stepper rather than a slider: the value is saved on every change, and a
+ * dragged slider would write a row per pixel. `onPreview` gets the new level so
+ * the screen can play a sample at it before it has been persisted.
+ */
+export function VolumeControl({
+  label,
+  value,
+  onChange,
+  offLabel,
+  disabled = false,
+}: {
+  label: string;
+  /** 0..100. */
+  value: number;
+  onChange: (next: number) => void;
+  offLabel: string;
+  disabled?: boolean;
+}): React.JSX.Element {
+  const theme = useTheme();
+  const ratio = Math.max(0, Math.min(100, value)) / 100;
+
+  const step = (delta: number): void => {
+    const next = Math.max(0, Math.min(100, value + delta));
+    if (next !== value) onChange(next);
+  };
+
+  return (
+    <Column gap={2} style={{ paddingVertical: theme.spacing(2), opacity: disabled ? 0.45 : 1 }}>
+      <Row justify="space-between">
+        <Txt size="body">{label}</Txt>
+        <Txt size="small" weight="semibold" color={theme.colors.textMuted}>
+          {value === 0 ? offLabel : formatNumber(value) + '%'}
+        </Txt>
+      </Row>
+      <Row gap={3}>
+        <Button
+          label="🔉"
+          size="sm"
+          variant="secondary"
+          disabled={disabled || value <= 0}
+          sound={null}
+          onPress={() => step(-SOUND_VOLUME_STEP)}
+        />
+        <View style={{ flex: 1, justifyContent: 'center' }}>
+          <ProgressBar ratio={ratio} color={theme.colors.primary} height={10} />
+        </View>
+        <Button
+          label="🔊"
+          size="sm"
+          variant="secondary"
+          disabled={disabled || value >= 100}
+          sound={null}
+          onPress={() => step(SOUND_VOLUME_STEP)}
+        />
+      </Row>
+    </Column>
+  );
+}
+
 export function ChipRow<T extends string>({
   options,
   value,

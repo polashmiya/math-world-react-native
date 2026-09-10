@@ -6,6 +6,7 @@ import { View } from 'react-native';
 import { AppProvider, useApp, useTheme } from './providers/AppProvider';
 import { RootNavigator } from './navigation/RootNavigator';
 import { Button, Column, Loading, ProgressBar, Screen, Spacer, Toast, Txt } from '../ui/components';
+import { SoundProvider } from '../ui/sound';
 import { useAppStore } from '../store';
 
 /** Splash and boot progress — the only screen shown before storage is ready. */
@@ -117,9 +118,12 @@ export default function App(): React.JSX.Element {
       {/* Seeding the metrics avoids a blank frame on the very first render. */}
       <SafeAreaProvider initialMetrics={initialWindowMetrics}>
         <AppProvider>
-          <ThemedStatusBar />
-          <BootGate />
-          <ToastHost />
+          {/* Inside AppProvider so the engine can follow the sound settings. */}
+          <SoundProvider>
+            <ThemedStatusBar />
+            <BootGate />
+            <ToastHost />
+          </SoundProvider>
         </AppProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

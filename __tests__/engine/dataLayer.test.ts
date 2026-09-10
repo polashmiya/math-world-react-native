@@ -526,10 +526,39 @@ describe('user repositories', () => {
     expect(settings.themeMode).toBe('system');
     expect(settings.adaptiveDifficultyEnabled).toBe(true);
 
-    await repos.users.updateSettings({ ...settings, largeText: true, language: 'en' });
+    expect(settings.fontScale).toBe('medium');
+    expect(settings.soundEnabled).toBe(true);
+    expect(settings.soundVolume).toBe(80);
+
+    await repos.users.updateSettings({ ...settings, fontScale: 'large', language: 'en' });
     const updated = await repos.users.getSettings();
-    expect(updated.largeText).toBe(true);
+    expect(updated.fontScale).toBe('large');
     expect(updated.language).toBe('en');
+    await db.close();
+  });
+
+  it('carries a pre-migration large-text preference into the text size', async () => {
+    const { db, repos } = await seededRepos();
+    // The settings row is a singleton keyed separately from the profile.
+    const settingsId = (await repos.users.getSettings()).id;
+
+    // Exactly what migration 007 leaves behind for a row written before it:
+    // the old toggle set, and no text size to read.
+    await db.execute(
+      "UPDATE user_settings SET large_text = 1, font_scale = '' WHERE id = ?",
+      [settingsId],
+    );
+    expect((await repos.users.getSettings()).fontScale).toBe('large');
+
+    await db.execute(
+      "UPDATE user_settings SET large_text = 0, font_scale = '' WHERE id = ?",
+      [settingsId],
+    );
+    expect((await repos.users.getSettings()).fontScale).toBe('medium');
+
+    // A value the enum does not recognise must not reach the theme.
+    await db.execute("UPDATE user_settings SET font_scale = 'gigantic' WHERE id = ?", [settingsId]);
+    expect((await repos.users.getSettings()).fontScale).toBe('medium');
     await db.close();
   });
 

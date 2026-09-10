@@ -122,7 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }): React.JSX.El
     const mode = preferred === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : preferred;
     return createTheme({
       mode,
-      largeText: settings?.largeText,
+      fontScale: settings?.fontScale,
       highContrast: settings?.highContrast,
       reduceAnimations: settings?.reduceAnimations,
     });
