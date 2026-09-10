@@ -1,6 +1,6 @@
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useApp, useServices, useTheme } from '../../app/providers/AppProvider';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { formatDuration } from '../../core/utils/date';
@@ -17,6 +17,7 @@ import {
   StatTile,
   Txt,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -28,8 +29,10 @@ export function SessionSummaryScreen(): React.JSX.Element {
   const services = useServices();
   const theme = useTheme();
   const { t } = useApp();
+  const { play } = useSound();
   const invalidate = useAppStore((state) => state.invalidateData);
   const [savedLesson, setSavedLesson] = useState(false);
+  const announced = useRef(false);
 
   const { answered, correct, xp, bestStreak, averageTimeMs, title, lessonId } = route.params;
   const accuracy = answered === 0 ? 0 : correct / answered;
@@ -37,6 +40,14 @@ export function SessionSummaryScreen(): React.JSX.Element {
   useEffect(() => {
     navigation.setOptions({ title: t('practice.sessionComplete') });
   }, [navigation, t]);
+
+  // The payoff chime. A clean run gets the longer one — the whole point of the
+  // sparkle is that it is rare enough to be worth chasing.
+  useEffect(() => {
+    if (announced.current) return;
+    announced.current = true;
+    play(answered > 0 && correct === answered ? 'perfect' : 'complete');
+  }, [answered, correct, play]);
 
   // A mastery test that passes marks the lesson complete.
   useEffect(() => {
@@ -47,10 +58,11 @@ export function SessionSummaryScreen(): React.JSX.Element {
       if (!found) return;
       await services.learning.completeLesson(found.lesson, accuracy);
       setSavedLesson(true);
+      play('unlock');
       invalidate();
     };
     void run();
-  }, [lessonId, accuracy, services, savedLesson, invalidate]);
+  }, [lessonId, accuracy, services, savedLesson, invalidate, play]);
 
   const message =
     accuracy >= 0.9
@@ -132,6 +144,7 @@ export function SessionSummaryScreen(): React.JSX.Element {
           icon="▶"
           full
           size="lg"
+          sound="start"
           onPress={() =>
             navigation.replace('PracticeRun', {
               mode: 'practice',

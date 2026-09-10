@@ -1028,6 +1028,36 @@ describe('profile service', () => {
     await db.close();
   });
 
+  it('keeps the retired large-text flag in step with the text size', async () => {
+    const { db, services } = await boot();
+
+    await services.profile.setFontScale('xLarge');
+    let settings = await services.repositories.users.getSettings();
+    expect(settings.fontScale).toBe('xLarge');
+    expect(settings.largeText).toBe(true);
+
+    await services.profile.setFontScale('xSmall');
+    settings = await services.repositories.users.getSettings();
+    expect(settings.fontScale).toBe('xSmall');
+    expect(settings.largeText).toBe(false);
+    await db.close();
+  });
+
+  it('clamps the sound volume instead of storing what it was handed', async () => {
+    const { db, services } = await boot();
+    expect((await services.repositories.users.getSettings()).soundVolume).toBe(80);
+
+    await services.profile.setSoundVolume(140);
+    expect((await services.repositories.users.getSettings()).soundVolume).toBe(100);
+
+    await services.profile.setSoundVolume(-20);
+    expect((await services.repositories.users.getSettings()).soundVolume).toBe(0);
+
+    await services.profile.setSoundEnabled(false);
+    expect((await services.repositories.users.getSettings()).soundEnabled).toBe(false);
+    await db.close();
+  });
+
   it('returns an overview with achievement progress', async () => {
     const { db, services } = await boot();
     const set = await services.practice.getPracticeQuestions({ mode: 'practice', count: 3, seed: 'profile' });

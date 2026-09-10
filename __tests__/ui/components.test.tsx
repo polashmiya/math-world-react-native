@@ -2,6 +2,7 @@ import { render, userEvent } from '@testing-library/react-native';
 import React from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppContext, type AppContextValue } from '../../src/app/providers/AppProvider';
+import { FONT_SCALES } from '../../src/core/constants/accessibility';
 import { createTranslator } from '../../src/i18n';
 import { createTheme } from '../../src/ui/theme';
 import {
@@ -169,11 +170,14 @@ describe('question components', () => {
 });
 
 describe('theme and accessibility', () => {
-  it('scales every font size when large text is on', () => {
-    const normal = createTheme({ mode: 'light' });
-    const large = createTheme({ mode: 'light', largeText: true });
-    expect(large.font.size('body')).toBeGreaterThan(normal.font.size('body'));
-    expect(large.font.size('math')).toBeGreaterThan(normal.font.size('math'));
+  it('scales every font size with the chosen text size', () => {
+    const sizes = FONT_SCALES.map((scale) => createTheme({ mode: 'light', fontScale: scale }));
+    for (let i = 1; i < sizes.length; i += 1) {
+      expect(sizes[i].font.size('body')).toBeGreaterThan(sizes[i - 1].font.size('body'));
+      expect(sizes[i].font.size('math')).toBeGreaterThan(sizes[i - 1].font.size('math'));
+      expect(sizes[i].font.size('caption')).toBeGreaterThanOrEqual(sizes[i - 1].font.size('caption'));
+    }
+    expect(createTheme({ mode: 'light' }).fontScale).toBe('medium');
   });
 
   it('has a distinct dark palette', () => {
@@ -191,7 +195,7 @@ describe('theme and accessibility', () => {
   });
 
   it('renders larger text in the large-text theme', async () => {
-    const large = createTheme({ mode: 'light', largeText: true });
+    const large = createTheme({ mode: 'light', fontScale: 'xLarge' });
     const { getByText } = await renderWithApp(<Txt>Scaled</Txt>, { theme: large });
     const style = getByText('Scaled').props.style;
     const flattened = Array.isArray(style) ? Object.assign({}, ...style.filter(Boolean)) : style;

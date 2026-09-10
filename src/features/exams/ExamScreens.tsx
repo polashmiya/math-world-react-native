@@ -35,6 +35,7 @@ import {
   StatTile,
   Txt,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -318,6 +319,7 @@ export function ExamRunScreen(): React.JSX.Element {
   const { t, settings } = useApp();
   const language = settings?.language ?? 'bn';
   const invalidate = useAppStore((state) => state.invalidateData);
+  const { play } = useSound();
 
   const [snapshot, setSnapshot] = useState<ExamSessionSnapshot | null>(null);
   const [exam, setExam] = useState<Exam | null>(null);
@@ -344,12 +346,13 @@ export function ExamRunScreen(): React.JSX.Element {
         }
         setSnapshot(built);
         setExam(found);
+        play('start');
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       }
     };
     void run();
-  }, [services, route.params.examId, route.params.year, t]);
+  }, [services, route.params.examId, route.params.year, play, t]);
 
   useEffect(() => {
     navigation.setOptions({ title: t('exams.mockExam'), headerBackVisible: false });
@@ -587,7 +590,9 @@ export function ExamResultScreen(): React.JSX.Element {
   const services = useServices();
   const theme = useTheme();
   const { t } = useApp();
+  const { play } = useSound();
   const [result, setResult] = useState<ExamResult | null>(null);
+  const announced = useRef(false);
 
   useEffect(() => {
     const run = async (): Promise<void> => {
@@ -595,6 +600,15 @@ export function ExamResultScreen(): React.JSX.Element {
     };
     void run();
   }, [services, route.params.attemptId]);
+
+  // A pass gets the fanfare; anything else gets the neutral end-of-run chime.
+  // An exam result is not the place to make a low score sound like a failure.
+  useEffect(() => {
+    if (!result || announced.current) return;
+    announced.current = true;
+    const ratio = result.maxScore === 0 ? 0 : result.finalScore / result.maxScore;
+    play(ratio >= 0.8 ? 'record' : 'complete');
+  }, [result, play]);
 
   useEffect(() => {
     navigation.setOptions({ title: t('exams.result'), headerBackVisible: true });

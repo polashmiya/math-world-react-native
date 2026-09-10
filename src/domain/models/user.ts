@@ -1,3 +1,4 @@
+import { DEFAULT_FONT_SCALE, DEFAULT_SOUND_VOLUME, type FontScale } from '../../core/constants/accessibility';
 import type { DifficultyBand } from '../../core/constants/difficulty';
 import type { Language } from '../../core/constants/levels';
 import type { ID, SyncMeta } from './common';
@@ -50,9 +51,16 @@ export interface UserSettings extends SyncMeta {
   language: Language;
   themeMode: 'light' | 'dark' | 'system';
   reduceAnimations: boolean;
+  /**
+   * Superseded by `fontScale`, which offers five steps instead of two. It is
+   * kept in sync so a shipped column is never orphaned, and nothing reads it.
+   */
   largeText: boolean;
+  fontScale: FontScale;
   highContrast: boolean;
   soundEnabled: boolean;
+  /** Sound effect volume, 0..100. */
+  soundVolume: number;
   hapticsEnabled: boolean;
   showBanglaDigits: boolean;
   adaptiveDifficultyEnabled: boolean;
@@ -66,8 +74,10 @@ export const DEFAULT_SETTINGS: Omit<UserSettings, keyof SyncMeta | 'id'> = {
   themeMode: 'system',
   reduceAnimations: false,
   largeText: false,
+  fontScale: DEFAULT_FONT_SCALE,
   highContrast: false,
   soundEnabled: true,
+  soundVolume: DEFAULT_SOUND_VOLUME,
   hapticsEnabled: true,
   showBanglaDigits: true,
   adaptiveDifficultyEnabled: true,

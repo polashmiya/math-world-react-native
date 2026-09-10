@@ -1,0 +1,5 @@
+# The sound effects are raw PCM. `core.autocrlf` is on for this repo, and a
+# WAV whose bytes happen to look like text must never be line-ending converted.
+*.wav binary
+*.mp3 binary
+*.m4a binary

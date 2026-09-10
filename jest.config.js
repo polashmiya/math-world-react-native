@@ -23,6 +23,15 @@ module.exports = {
       preset: 'jest-expo/android',
       testMatch: ['<rootDir>/__tests__/ui/**/*.test.tsx'],
       setupFilesAfterEnv: ['<rootDir>/__tests__/setup/ui.ts'],
+      // Metro treats `.wav` as an asset, but the React Native jest preset only
+      // lists image and video extensions — without this the sound catalogue's
+      // `require()` calls hand binary audio to babel. Jest merges this with the
+      // preset's own transforms rather than replacing them.
+      transform: {
+        '^.+\\.(wav|mp3|m4a|aac|ogg)$': require.resolve(
+          '@react-native/jest-preset/jest/assetFileTransformer.js',
+        ),
+      },
       transformIgnorePatterns: [
         'node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)',
       ],

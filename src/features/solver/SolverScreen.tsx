@@ -21,6 +21,7 @@ import {
   Spacer,
   Txt,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -34,6 +35,7 @@ export function SolverScreen(): React.JSX.Element {
   const services = useServices();
   const theme = useTheme();
   const { t, settings } = useApp();
+  const { play } = useSound();
   const language = settings?.language ?? 'bn';
 
   const [module, setModule] = useState<SolverModule>(route.params?.module ?? 'calculator');
@@ -58,9 +60,11 @@ export function SolverScreen(): React.JSX.Element {
     setError(null);
     try {
       setOutput(services.solver.solve(module, input, { angleUnit }));
+      play('reveal');
     } catch (e) {
       setOutput(null);
       setError(e instanceof Error ? e.message : String(e));
+      play('blocked');
     }
   };
 
@@ -127,6 +131,8 @@ export function SolverScreen(): React.JSX.Element {
             icon="="
             full
             size="lg"
+            // The result — or the parse error — is the sound here.
+            sound={null}
             disabled={input.trim().length === 0}
             onPress={solve}
           />

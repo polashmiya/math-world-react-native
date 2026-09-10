@@ -4,10 +4,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useApp, useServices, useTheme } from '../../app/providers/AppProvider';
 import type { RootStackParamList } from '../../app/navigation/types';
 import { DIFFICULTY_BANDS, type DifficultyBand } from '../../core/constants/difficulty';
+import type { FontScale } from '../../core/constants/accessibility';
 import { LANGUAGES, type Language } from '../../core/constants/levels';
 import { LEARNING_GOALS, LEARNING_GOAL_LABELS, type LearningGoal } from '../../domain/models/user';
 import type { ProfileOverview } from '../../domain/services';
-import { LANGUAGE_LABELS, pickLocalized } from '../../i18n';
+import { LANGUAGE_LABELS, pickLocalized, type TranslationKey } from '../../i18n';
 import {
   AppLogoMark,
   Badge,
@@ -17,6 +18,7 @@ import {
   Divider,
   FadeInView,
   Field,
+  FontScalePicker,
   Loading,
   ProgressBar,
   Row,
@@ -27,12 +29,22 @@ import {
   Stepper,
   Toggle,
   Txt,
+  VolumeControl,
 } from '../../ui/components';
+import { useSound } from '../../ui/sound';
 import { useAppStore } from '../../store';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 const AVATARS = ['🧑‍🎓', '👩‍🎓', '🧑‍🏫', '🦊', '🐼', '🦉', '🚀', '🌟', '🧠', '🔢'];
+
+const FONT_SCALE_LABEL_KEYS: Record<FontScale, TranslationKey> = {
+  xSmall: 'profile.textSizeXSmall',
+  small: 'profile.textSizeSmall',
+  medium: 'profile.textSizeMedium',
+  large: 'profile.textSizeLarge',
+  xLarge: 'profile.textSizeXLarge',
+};
 
 /** Local profile and settings (spec §41, §46). No account, no network. */
 export function ProfileScreen(): React.JSX.Element {
@@ -40,6 +52,7 @@ export function ProfileScreen(): React.JSX.Element {
   const services = useServices();
   const theme = useTheme();
   const { t, refreshUser, boot } = useApp();
+  const { play } = useSound();
   const dataVersion = useAppStore((state) => state.dataVersion);
   const invalidate = useAppStore((state) => state.invalidateData);
 
@@ -248,11 +261,42 @@ export function ProfileScreen(): React.JSX.Element {
             ))}
           </Row>
           <Divider />
+          <Column gap={2} style={{ paddingVertical: theme.spacing(2) }}>
+            <Txt size="body">{t('profile.textSize')}</Txt>
+            <FontScalePicker
+              value={settings.fontScale}
+              onChange={(next) => void updateSettings({ fontScale: next })}
+              labelFor={(scale) => t(FONT_SCALE_LABEL_KEYS[scale])}
+            />
+            <Txt size="body" color={theme.colors.textMuted}>
+              {t('profile.textSizePreview')}
+            </Txt>
+          </Column>
+          <Divider />
           <Toggle
-            label={t('profile.largeText')}
-            value={settings.largeText}
-            onChange={(value) => void updateSettings({ largeText: value })}
+            label={t('profile.soundEffects')}
+            detail={t('profile.soundEffectsDetail')}
+            value={settings.soundEnabled}
+            // The switch announces itself below, at the volume it is turning on.
+            sound={null}
+            onChange={(value) => {
+              if (value) play('correct', { volume: settings.soundVolume / 100, ignoreMute: true });
+              void updateSettings({ soundEnabled: value });
+            }}
           />
+          <VolumeControl
+            label={t('profile.soundVolume')}
+            offLabel={t('profile.soundVolumeOff')}
+            value={settings.soundVolume}
+            disabled={!settings.soundEnabled}
+            onChange={(next) => {
+              // Played at the level being chosen — the saved value has not
+              // reached the engine yet when this fires.
+              play('reward', { volume: next / 100, ignoreMute: true });
+              void updateSettings({ soundVolume: next });
+            }}
+          />
+          <Divider />
           <Toggle
             label={t('profile.highContrast')}
             value={settings.highContrast}
@@ -545,6 +589,8 @@ export function OnboardingScreen(): React.JSX.Element {
           <Button
             label={t('onboarding.getStarted')}
             loading={saving}
+            // The first sound the app ever makes.
+            sound="unlock"
             onPress={() => void finish()}
             style={{ flex: 1 }}
           />

@@ -23,6 +23,12 @@ to break by accident.
    `00N_*.ts`, register it in `migrations/index.ts`, and keep it non-destructive.
 7. **Every user-visible string goes through `t()`**, and content carries both
    `field` and `fieldBn`. Bangla is the primary language.
+8. **A screen never plays a tap.** `Button`, `Card`, `Chip`, `OptionButton` and
+   `Toggle` already do, from inside the component. Screens call `play()` only
+   for sounds that carry meaning — right, wrong, level up. Use `sound={null}` on
+   a control whose result is the sound.
+9. **Sound never blocks anything.** `useSound().play()` returns immediately and
+   swallows its own failures; nothing may await it or branch on it.
 
 ## Adding things
 
@@ -40,9 +46,15 @@ judge it.
 engine never needs to change. Section `questionCount`s must sum to
 `totalQuestions` or validation fails.
 
+**A sound** — add a recipe to `RECIPES` in `scripts/generate-sounds.mjs`, run
+`npm run sounds:build`, then add the name to `SoundName` and `SOUND_SOURCES` in
+`src/ui/sound/catalogue.ts`. Give it a voice count only if it can overlap
+itself. The `level` in the recipe is how loud it ends up relative to the
+loudest effect — set it low unless the sound is a reward.
+
 **A screen** — put it in `features/<feature>/`, register the route in
 `app/navigation/types.ts` and `RootNavigator.tsx`, and use the components from
-`ui/components` so theming, large text and high contrast keep working.
+`ui/components` so theming, text size, high contrast and sound keep working.
 
 ## Verifying
 

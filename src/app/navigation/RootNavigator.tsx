@@ -12,6 +12,7 @@ import { Text, View } from 'react-native';
 import { useApp, useTheme } from '../providers/AppProvider';
 import type { RootStackParamList, TabParamList } from './types';
 import { useExitConfirmation } from './useExitConfirmation';
+import { useSound } from '../../ui/sound';
 import { DailyBrainScreen } from '../../features/dailyBrain/DailyBrainScreen';
 import {
   BossBattleScreen,
@@ -69,9 +70,13 @@ function TabBarIcon({ name, focused, size }: { name: keyof TabParamList; focused
 function TabNavigator(): React.JSX.Element {
   const theme = useTheme();
   const { t } = useApp();
+  const { play } = useSound();
 
   return (
     <Tabs.Navigator
+      // The tab bar is the one set of buttons that does not go through `Button`
+      // or `Card`, so it needs its own tap.
+      screenListeners={{ tabPress: () => play('tap') }}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: theme.colors.primary,

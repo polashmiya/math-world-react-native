@@ -1,3 +1,4 @@
+import { DEFAULT_FONT_SCALE, FONT_SCALE_FACTORS, type FontScale } from '../../core/constants/accessibility';
 import type { TopicColorKey } from '../../domain/models';
 
 /**
@@ -39,8 +40,12 @@ export interface Theme {
   colors: ThemePalette;
   spacing: (steps: number) => number;
   radius: { sm: number; md: number; lg: number; xl: number; pill: number };
+  /** The text size the user chose. */
+  fontScale: FontScale;
   font: {
     size: (token: FontSizeToken) => number;
+    /** The multiplier behind `size`, for anything sized in raw pixels. */
+    scale: number;
     weight: { regular: '400'; medium: '500'; semibold: '600'; bold: '700' };
     /** Monospace family for mathematical expressions (spec §46). */
     mono: string;
@@ -198,7 +203,8 @@ const HIGH_CONTRAST_DARK: Partial<ThemePalette> = {
 
 export interface ThemeOptions {
   mode: 'light' | 'dark';
-  largeText?: boolean;
+  /** Five-step text size (spec §46). Defaults to `medium`. */
+  fontScale?: FontScale;
   highContrast?: boolean;
   reduceAnimations?: boolean;
 }
@@ -213,18 +219,22 @@ export function createTheme(options: ThemeOptions): Theme {
       : HIGH_CONTRAST_LIGHT
     : {};
   const colors: ThemePalette = { ...base, ...contrastOverlay };
-  // Large text scales every size by a fifth rather than only the body copy.
-  const scale = options.largeText ? 1.2 : 1;
+  // The scale applies to every token, not just body copy: raising the body size
+  // alone leaves headings looking smaller than the text underneath them.
+  const fontScale = options.fontScale ?? DEFAULT_FONT_SCALE;
+  const scale = FONT_SCALE_FACTORS[fontScale] ?? 1;
 
   return {
     mode: options.mode,
     highContrast: !!options.highContrast,
     reduceAnimations: !!options.reduceAnimations,
+    fontScale,
     colors,
     spacing: (steps: number) => Math.round(steps * SPACING_UNIT),
     radius: { sm: 8, md: 12, lg: 18, xl: 26, pill: 999 },
     font: {
       size: (token) => Math.round(BASE_FONT_SIZES[token] * scale),
+      scale,
       weight: { regular: '400', medium: '500', semibold: '600', bold: '700' },
       mono: 'monospace',
     },
